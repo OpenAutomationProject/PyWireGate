@@ -16,8 +16,9 @@
 ## You should have received a copy of the GNU General Public License along with this program;
 ## if not, see <http://www.gnu.de/documents/gpl-3.0.de.html>.
 
-import sys
-sys.path.append( "/usr/local/WireGate" )
+if __name__ == "__main__":
+    import sys
+    sys.path.append( "" )
 import DPT_Types
 
 class busmonitor:
