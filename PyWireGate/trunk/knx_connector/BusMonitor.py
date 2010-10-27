@@ -20,6 +20,7 @@ if __name__ == "__main__":
     import sys
     sys.path.append( "" )
 import DPT_Types
+import time
 
 class busmonitor:
     def __init__(self, WireGateInstance):
@@ -29,31 +30,31 @@ class busmonitor:
         self.dpt = DPT_Types.dpt_type()
 
         ## FIXME: Not fully implemented
-        self.apcicodes = [
-            'A_GroupValue_Read', 
-            'A_GroupValue_Response',
-            'A_GroupValue_Write',
-            'A_PhysicalAddress_Write',
-            'A_PhysicalAddress_Read',
-            'A_PhysicalAddress_Response',
-            'A_ADC_Read',
-            'A_ADC_Response',
-            'A_Memory_Read',
-            'A_Memory_Response',
-            'A_Memory_Write',
-            'A_UserMemory',
-            'A_DeviceDescriptor_Read',
-            'A_DeviceDescriptor_Response',
-            'A_Restart',
-            'A_OTHER'
-        ]
+        self.apcicodes = {
+            0:'A_GroupValue_Read', 
+            64:'A_GroupValue_Response',
+            128:'A_GroupValue_Write',
+            192:'A_PhysicalAddress_Write',
+            256:'A_PhysicalAddress_Read',
+            320:'A_PhysicalAddress_Response',
+            4:'A_ADC_Read',
+            5:'A_ADC_Response',
+            6:'A_Memory_Read',
+            7:'A_Memory_Response',
+            8:'A_Memory_Write',
+            9:'A_UserMemory',
+            10:'A_DeviceDescriptor_Read',
+            11:'A_DeviceDescriptor_Response',
+            12:'A_Restart',
+            13:'A_OTHER'
+        }
         ## FIXME: Not fully implemented
-        self.tpducodes = [
-            'T_DATA_XXX_REQ',
-            'T_DATA_CONNECTED_REQ',
-            'T_DISCONNECT_REQ',
-            'T_ACK'
-        ]
+        self.tpducodes = {
+            0:'T_DATA_XXX_REQ',
+            16:'T_DATA_CONNECTED_REQ',
+            2:'T_DISCONNECT_REQ',
+            3:'T_ACK'
+        }
         self.prioclasses = [
             'system',
             'alarm',
@@ -74,6 +75,23 @@ class busmonitor:
         ## L Data Len
         ## A APDU
         ######################################################################################
+        ## Accept List Hex or Binary Data
+        if type(buf)==str:
+            tmp = buf
+            buf = []
+            try:
+                ##Hex or Binary
+                if ord(tmp[0])>122:
+                    ##Binary
+                    for char in tmp:
+                        buf.append(ord(char))
+                else:
+                    ##Hex
+                    for hex in range(0,len(tmp),2):
+                        buf.append(int(tmp[hex:hex+2],16))
+            except:
+                self.errormsg(tmp)
+                
         msg = {'raw':buf,'value':''}
         try:
             msg['ctrl1'] = self._decodeCtrlField1(buf[0])
@@ -81,8 +99,8 @@ class busmonitor:
             msg['srcaddr'] = self._decodePhysicalAddr(buf[1:3])
             msg['AddressType'], msg['nctrl'], msg['datalen'] = self._decodeNPDU(buf[5])
             msg['apdu'], msg['data'] = self._decodeAPDU(buf[6:-1],msg['AddressType'],msg['datalen'])
-
-            if msg['ctrl2']['DestAddrType'] == 0:
+            
+            if msg['ctrl2']['DestAddrType'] == 0 and msg['apdu']['tpdu'] == "T_DATA_XXX_REQ":
                 msg['dstaddr'] = self._decodeGrpAddr(buf[3:5])
                 id = "KNX:%s" % msg['dstaddr']
                 
@@ -99,8 +117,9 @@ class busmonitor:
                 else:
                     name = dsobj.name
 
-                print "%s (%s): %r" % (name, msg['dstaddr'], msg['value'])
+                print "%s (%s): %r (%r)" % (name, msg['dstaddr'], msg['value'],msg['apdu'])
             else:
+                print "NONGROUP"
                 ## non Group Communication
                 msg['dstaddr'] = self._decodePhysicalAddr(buf[3:5])
         except:
@@ -113,6 +132,7 @@ class busmonitor:
 
     def errormsg(self,msg=''):
         f=open("/tmp/WGerror","a+")
+        f.write(time.asctime())
         __import__('traceback').print_exc(file=__import__('sys').stdout)
         __import__('traceback').print_exc(file=f)
         f.write("MSG:"+repr(msg))
@@ -204,23 +224,28 @@ class busmonitor:
         ## T Transport Control Field
         ## A APCI
         ## M APCI/data
-        val = (raw[0] << 8) + raw[1]
-        tcf = val >> 10
-        tpdu,sequence = self._decodeTransportCtrl(tcf,addresstype)
-        apci = (val & 0x3c0)
-        if tpdu =="T_DATA_XXX_REQ" and datalength==1:
-            ## 6bit only
-            self.debug("DEBUG:6BIT")
-            apci = apci >> 6
-            data = [val & 0x3f]
+        tpdu,sequence = self._decodeTransportCtrl(raw,addresstype)
+        if tpdu == "T_DATA_XXX_REQ":
+            if datalength == 1:
+                ## 6bit only
+                self.debug("DEBUG:6BIT %s" % self.tobinstr(raw[1]))
+                apci = (raw[1] & 0x80)
+                data = [raw[1] & 0x3f]
+            else:
+                val = (raw[0] << 8) + raw[1]
+                apci = (val & 0x3c0)
+                data = raw[2:]
         else:
-            data = raw[2:]
+            self.debug("FIXME:#######################TPD: %r " % tpdu)
+            data = ""
+            apci = 13
+              
         return {
             'tpdu':tpdu,
             'seq':sequence,
-            'apci':apci }, data
-        
-    def _decodeTransportCtrl(self,tcf,adresstype):
+            'apci':self._decodeAPCI(apci) }, data
+
+    def _decodeTransportCtrl(self,raw,adresstype):
         ## Transport Control Field
         ## 1 0 0 0 0 0 0     T_Data_Broadcast-PDU (destination_address = 0)
         ## 1 0 0 0 0 0 0     T_Data_Group-PDU (destination_address <> 0)
@@ -232,9 +257,14 @@ class busmonitor:
         ## 0 1 1 S S S S 1 0 T_ACK-PDU
         ## 0 1 1 S S S S 1 1 T_NAK-PDU
         ## FIXME: Incomplete, only Data/ControlFlag and Numbered used
+        tcf = raw[0] >> 5
+        ## FIXME: Not fully implemented 
+        if tcf &0x2 and len(raw) >1:
+            tcf = (raw[1] &0x3) <<8 + tcf
         sequence = 0
+        
         try:
-            tpdu = self.tpducodes[(tcf & 0xc0) >> 6]
+            tpdu = self.tpducodes[tcf]
         except KeyError:
             tpdu = "T_NOTIMPLEMENTED_ERROR"
             
@@ -243,6 +273,10 @@ class busmonitor:
         
     def _decodeAPCI(self,apci):
         ## APCI
+        try:
+            apci = self.apcicodes[apci]
+        except KeyError:
+            pass
         return apci
         
     def debug(self,msg):
@@ -253,4 +287,7 @@ class busmonitor:
 if __name__ == "__main__":
     busmon = busmonitor(False)
     #busmon.decode([176, 17, 253, 17, 104, 80, 222, 84])
-    busmon.decode([176, 17, 4, 17, 110, 80, 128, 245])
+    #busmon.decode("b01104116e5080f5")
+    #busmon.decode("".join([chr(x) for x in [176, 17, 4, 17, 110, 80, 128, 245]]))
+    print busmon.decode([176,176, 17, 4, 17, 110, 80, 128, 245])
+    
