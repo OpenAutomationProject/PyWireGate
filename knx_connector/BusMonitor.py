@@ -103,18 +103,11 @@ class busmonitor:
                 
                 ## search Datastoreobject
                 dsobj = self.WG.DATASTORE.get(id)
-                
                 ## Decode the DPT Value
                 msg['value'] = self.dpt.decode( msg['data'],dsobj=dsobj)
-                
                 ## update Object in Datastore
                 self.WG.DATASTORE.update(id,msg['value'])
-                if not dsobj:
-                    name = "unknown"
-                else:
-                    name = dsobj.name
-
-                print "%s (%s): %r (%r)" % (name, msg['dstaddr'], msg['value'],msg['apdu'])
+                #print "%s (%s): \x22%r\x22" % (dsobj.name, msg['dstaddr'], msg['value'])
             else:
                 print "NONGROUP"
                 self.errormsg(msg)
@@ -130,8 +123,8 @@ class busmonitor:
 
     def errormsg(self,msg=''):
         f=open("/tmp/WGerror","a+")
-        f.write(time.asctime())
         __import__('traceback').print_exc(file=f)
+        f.write(time.asctime())
         f.write("MSG:"+repr(msg))
         f.close()
 
@@ -286,4 +279,4 @@ if __name__ == "__main__":
     #busmon.decode("b01104116e5080f5")
     #busmon.decode("".join([chr(x) for x in [176, 17, 4, 17, 110, 80, 128, 245]]))
     print busmon.decode([176,176, 17, 4, 17, 110, 80, 128, 245])
-    
+    print busmon.decode([ 188, 17, 43, 32, 131, 225, 0, 128, 187, 188])
