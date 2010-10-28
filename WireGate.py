@@ -134,12 +134,12 @@ class WireGate(daemon.Daemon):
     def errorlog(self,msg=False):
         exc_type, exc_value, exc_traceback = sys.exc_info()
         tback = traceback.extract_tb(exc_traceback)
-        try:
-            ## Wenn der Fehler in der Datenbank ist ignorieren
-            if repr(self.errorDB[tback[-1][0]][str(tback[-1][1])])[1:-1] == repr(exc_value):
-               return 
-        except KeyError:
-            pass
+        #try:
+        #    ## Wenn der Fehler in der Datenbank ist ignorieren
+        #    if repr(self.errorDB[tback[-1][0]][str(tback[-1][1])])[1:-1] == repr(exc_value):
+        #       return 
+        #except KeyError:
+        #    pass
         print tback
         print exc_type, exc_value
         if msg:
@@ -229,6 +229,7 @@ class datastore:
             type(self.dataobjects[id])
         except KeyError:
             self.dataobjects[id] = dataObject(self.WG,id)
+        print "Updating %s (%s): %r" % (self.dataobjects[id].name,id,val)
         self.dataobjects[id].setValue(val)
         return self.dataobjects[id]
 
@@ -236,15 +237,17 @@ class datastore:
         try:
             return self.dataobjects[id]
         except KeyError:
-            return False
+            self.dataobjects[id] = dataObject(self.WG,id)
+            return self.dataobjects[id]
 	    
 class dataObject:
     def __init__(self,WireGateInstance,id):
         self.WG = WireGateInstance
-        self.name = ""
+        namespace = id.split(":",1)[0]
+        self.name = namespace +":unbekannt-"+time.strftime("%Y-%m-%d_%H:%M:%S")
         self.value = ""
         self.id = id
-        self.dptid = 0
+        self.dptid = -1
     def setValue(self,val):
         self.value = val
     def getValue(self):
