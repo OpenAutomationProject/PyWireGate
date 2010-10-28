@@ -45,14 +45,19 @@ class dpt_type:
         
         
     def decode(self,raw,dptid=0,dsobj=False):
-        dpt=0
+        dpt=-1
         if dptid > 0:
             dpt = dptid
         elif dsobj:
             dpt = dsobj.dptid
         else:
+            return False
+        if dpt == -1:
             dpt = self.guessType(raw)
+            if dsobj:
+                dsobj.dptid = dpt
             self.debug("Guessed:"+str(dpt))
+            print "Guessed:"+str(dpt)
         if dpt == 0:
             return raw
         return self._decode(raw,dpt)

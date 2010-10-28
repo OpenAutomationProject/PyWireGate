@@ -42,14 +42,17 @@ class knx_connector(Connector):
     def run(self):
         while self.isrunning:
             ## Create Socket
-            self.KNX.EIBSocketURL(self.config['url'])
-            self.KNX.EIB_Cache_Enable()
-            self.KNX.EIBOpenVBusmonitor_async()
-            ## wait a second for the Busmon to activate
-            self.idle(0.5)
-            self._run()
             try:
-                self.KNX.EIBClose()
+                self.KNX.EIBSocketURL(self.config['url'])
+                self.KNX.EIB_Cache_Enable()
+                self.KNX.EIBOpenVBusmonitor_async()
+                ## wait a second for the Busmon to activate
+                self.idle(0.5)
+                self._run()
+                try:
+                    self.KNX.EIBClose()
+                except:
+                    self.WG.errorlog()
             except:
                 self.WG.errorlog()
             self.debug("Socket Closed waiting 5 sec")
