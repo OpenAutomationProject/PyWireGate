@@ -21,7 +21,6 @@ from connector import Connector
 import EIBConnection
 import select
 import BusMonitor
-import DPT_Types
 
 
 class knx_connector(Connector):
@@ -32,15 +31,12 @@ class knx_connector(Connector):
         self.KNX = EIBConnection.EIBConnection()
         self.KNXBuffer = EIBConnection.EIBBuffer()
         self.busmon = BusMonitor.busmonitor(WireGateInstance)
-        self.DPT = DPT_Types.dpt_type()
         self.config = {}
         try:
             self.config = self.WG.config['KNX']
             type(self.config['url'])
         except KeyError:
             self.config['url']='local:/tmp/eib'
-        
-        self.nicehex=lambda x: " ".join(map(lambda y:"%.2x" % y,x))
         self.start()
 
     def run(self):
@@ -50,13 +46,13 @@ class knx_connector(Connector):
             self.KNX.EIB_Cache_Enable()
             self.KNX.EIBOpenVBusmonitor_async()
             ## wait a second for the Busmon to activate
-            self.idle(.1)
+            self.idle(0.5)
             self._run()
             try:
                 self.KNX.EIBClose()
             except:
                 self.WG.errorlog()
-            print "Socket Closed waiting 5 sec"
+            self.debug("Socket Closed waiting 5 sec")
             self.idle(5)
 
     def _run(self):
