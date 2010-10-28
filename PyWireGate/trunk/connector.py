@@ -34,8 +34,8 @@ class Connector:
         while self.isrunning:
             if cnt >= stime:
                 return
-            cnt+=1
-            time.sleep(1)
+            cnt+=.5
+            time.sleep(.5)
         
     def run(self):
         """Overide"""
