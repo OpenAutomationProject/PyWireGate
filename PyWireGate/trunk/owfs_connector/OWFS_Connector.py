@@ -61,7 +61,7 @@ class owfs_connector(Connector):
                 cnt = 0
                 self.findsensors()
             self.read()
-            self.debug(self.sensors)
+            #self.debug(self.sensors)
             self.idle(self.config['cycletime'])
             cnt += 1
             
