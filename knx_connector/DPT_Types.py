@@ -74,7 +74,7 @@ class dpt_type:
         __import__('traceback').print_exc(file=__import__('sys').stdout)
 
     def debug(self,msg):
-        print msg
+        pass
 
     def toBigInt(self,raw):
         c=0

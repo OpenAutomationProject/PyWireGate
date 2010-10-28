@@ -16,9 +16,6 @@
 ## You should have received a copy of the GNU General Public License along with this program;
 ## if not, see <http://www.gnu.de/documents/gpl-3.0.de.html>.
 
-if __name__ == "__main__":
-    import sys
-    sys.path.append( "" )
 import DPT_Types
 import time
 
@@ -120,6 +117,7 @@ class busmonitor:
                 print "%s (%s): %r (%r)" % (name, msg['dstaddr'], msg['value'],msg['apdu'])
             else:
                 print "NONGROUP"
+                self.errormsg(msg)
                 ## non Group Communication
                 msg['dstaddr'] = self._decodePhysicalAddr(buf[3:5])
         except:
@@ -133,11 +131,9 @@ class busmonitor:
     def errormsg(self,msg=''):
         f=open("/tmp/WGerror","a+")
         f.write(time.asctime())
-        __import__('traceback').print_exc(file=__import__('sys').stdout)
         __import__('traceback').print_exc(file=f)
         f.write("MSG:"+repr(msg))
         f.close()
-        print repr(msg)
 
         
     def _decodeCtrlField1(self,raw):
