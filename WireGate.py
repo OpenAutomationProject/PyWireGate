@@ -24,17 +24,16 @@ import traceback
 import daemon
 import logging
 
+import datastore
+
 class WireGate(daemon.Daemon):
     def __init__(self,REDIRECTIO=False):
         self.WG = self
         self.watchdoglist = {}
         self.plugins = {}
         self.LOGGER = {}
-        self.DATASTORE = datastore(self)
+        self.DATASTORE = datastore.datastore(self)
 
-        mypath = "/".join(sys.argv[0].split("/")[:-1])
-        ## DB für bekannte Fehler
-        self.errorDB = self.readConfig(mypath+"/errorDB.conf")
         self.readWireGateConfig()
         daemon.Daemon.__init__(self,self.config['WireGate']['pidfile'],REDIRECTIO)
 
@@ -88,6 +87,9 @@ class WireGate(daemon.Daemon):
                 self.plugins[instance].shutdown()
             except:
                 pass
+                
+        ## now save Datastore
+        self.DATASTORE.save()
 
     def run(self):
         import time
@@ -134,12 +136,6 @@ class WireGate(daemon.Daemon):
     def errorlog(self,msg=False):
         exc_type, exc_value, exc_traceback = sys.exc_info()
         tback = traceback.extract_tb(exc_traceback)
-        #try:
-        #    ## Wenn der Fehler in der Datenbank ist ignorieren
-        #    if repr(self.errorDB[tback[-1][0]][str(tback[-1][1])])[1:-1] == repr(exc_value):
-        #       return 
-        #except KeyError:
-        #    pass
         print tback
         print exc_type, exc_value
         if msg:
@@ -193,66 +189,6 @@ class WireGate(daemon.Daemon):
     def decouple(self):
         os.chdir("/usr/local/WireGate")
         os.umask(0)
-
-
-
-class Tee(object):
-    def __init__(self, name, mode,term=False):
-        self.term = term
-        self.file = open(name, mode)
-        self.stdout = sys.stdout
-    def __del__(self):
-        self.file.close()
-    def write(self, data):
-        self.file.write(data)
-        self.file.flush()
-        if self.term:
-            self.stdout.write(data)
-	    
-
-class datastore:
-    def __init__(self,WireGateInstance):
-        self.WG = WireGateInstance
-        self.dataobjects = {}
-        self.readgaconf()
-    
-    def readgaconf(self):
-        ga = self.WG.readConfig("/etc/wiregate/eibga.conf")
-        for key in ga.keys():
-            obj = self.update("KNX:"+key,0)
-            obj.dptid = ga[key]['dptsubid']
-            obj.name = ga[key]['name']
-            
-    
-    def update(self,id,val):
-        try:
-            type(self.dataobjects[id])
-        except KeyError:
-            self.dataobjects[id] = dataObject(self.WG,id)
-        print "Updating %s (%s): %r" % (self.dataobjects[id].name,id,val)
-        self.dataobjects[id].setValue(val)
-        return self.dataobjects[id]
-
-    def get(self,id):
-        try:
-            return self.dataobjects[id]
-        except KeyError:
-            self.dataobjects[id] = dataObject(self.WG,id)
-            return self.dataobjects[id]
-	    
-class dataObject:
-    def __init__(self,WireGateInstance,id):
-        self.WG = WireGateInstance
-        namespace = id.split(":",1)[0]
-        self.name = namespace +":unbekannt-"+time.strftime("%Y-%m-%d_%H:%M:%S")
-        self.value = ""
-        self.id = id
-        self.dptid = -1
-    def setValue(self,val):
-        self.value = val
-    def getValue(self):
-        return self.value
-
 
 
 

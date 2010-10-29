@@ -29,29 +29,37 @@ class owfs_connector(Connector):
         except KeyError:
             self.config = {'cycletime':15}
         self.owfs = connection.Connection()
-        self.issensor = re.compile(r"^\x2F[0-9][0-9]")
-        self.isbus = re.compile(r"^\x2Fbus\x2E([0-9]+)")
-        self.supportedsensors = { "DS1420":[],"DS18B20" : ['temperature'] }
+        
+        ## some regex for identifying Sensors and busses
+        self.issensor = re.compile(r"[0-9][0-9]\x2E[0-9a-fA-F]+")
+        self.isbus = re.compile(r".*?\x2Fbus\x2E([0-9]+)")
+        self.supportedsensors = { "DS1420":[],"DS18B20" : ['temperature','power'], "DS2438":['temperature','humidity','vis','VDD'] }
         self.sensors = {}
         self.start()
 
     def findsensors(self):
-        for sensor in self.owfs.dir("/"):
-            if self.issensor.match(sensor):
-                sensortype=self.owfs.read(sensor+"/type")
-                interfaces = []
-                try:
-                    interfaces = self.supportedsensors[sensortype]
-                    self.sensors[sensor[1:]] = {'type':sensortype,'interfaces':interfaces,'resolution':'10'}
-                except KeyError:
-                    self.debug("unsupported Type: "+sensortype)
-                    continue
-                except:
-                    self.WG.errorlog()
+        for bus in self.owfs.dir("/uncached"):
+            if self.isbus.match(bus):
+                busname = self.isbus.findall(bus)[0]
+                for sensor in self.owfs.dir(bus):
+                    ## remove /uncached
+                    sensor = sensor.split("/")[-1]
+                    if self.issensor.match(sensor):
+                        self.debug("found Sensor %s at Bus %r" % (sensor,busname))
+                        sensortype=self.owfs.read(sensor+"/type")
+                        interfaces = []
+                        try:
+                            interfaces = self.supportedsensors[sensortype]
+                            self.sensors[sensor] = {'type':sensortype,'interfaces':interfaces,'resolution':'10'}
+                        except KeyError:
+                            self.debug("unsupported Type: "+sensortype)
+                            continue
+                        except:
+                            self.WG.errorlog()
 
 
-            elif self.isbus.findall(sensor):
-                self.debug("BUSTIME: "+str(self.owfs.read(sensor+"/interface/statistics/bus_time")))
+                
+                self.debug("BUSTIME: "+str(self.owfs.read(bus+"/interface/statistics/bus_time")))
 
     
     def run(self):
@@ -67,12 +75,13 @@ class owfs_connector(Connector):
             
     def read(self):
         for sensor in self.sensors.keys():
-            self.sensors[sensor]['power'] = self.owfs.read("/"+sensor+"/power")
+            #self.sensors[sensor]['power'] = self.owfs.read("/"+sensor+"/power")
             for get in self.sensors[sensor]['interfaces']:
-                self.sensors[sensor][get] = self.owfs.read("/"+sensor+"/"+get+self.sensors[sensor]['resolution'])
+                self.sensors[sensor][get] = self.owfs.read("/uncached/"+sensor+"/"+get)
                 id = "OW:"+sensor+"_"+get
                 try:
-                    self.WG.DATASTORE.update(id,self.sensors[sensor][get])
+                    if self.sensors[sensor][get]:
+                        self.WG.DATASTORE.update(id,self.sensors[sensor][get])
                 except:
                     self.WG.errorlog(msg)
 
