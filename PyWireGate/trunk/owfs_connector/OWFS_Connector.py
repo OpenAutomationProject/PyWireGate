@@ -28,29 +28,68 @@ class owfs_connector(Connector):
             self.config = self.WG.config['owfs']
         except KeyError:
             self.config = {'cycletime':15}
+        
+        ## onyl localhost FIXME: accept for remote host?
         self.owfs = connection.Connection()
         
         ## some regex for identifying Sensors and busses
         self.issensor = re.compile(r"[0-9][0-9]\x2E[0-9a-fA-F]+")
         self.isbus = re.compile(r".*?\x2Fbus\x2E([0-9]+)")
-        self.supportedsensors = { "DS1420":[],"DS18B20" : ['temperature','power'], "DS2438":['temperature','humidity','vis','VDD'] }
+        
+        ## Sensors and their interfaces .. maybe import from a config file ?
+        self.supportedsensors = { 
+            "DS1420":[],
+            "DS18B20" : [
+                'temperature',
+                'power'
+             ], 
+            "DS2438":[
+                'temperature',
+                'humidity',
+                'vis',
+                'VDD'
+            ] 
+        }
+        
+        ## Local-list for the sensors
         self.sensors = {}
         self.start()
 
     def findsensors(self):
+        ## search for active busses
         for bus in self.owfs.dir("/uncached"):
             if self.isbus.match(bus):
+                
+                ## get the bus ID
                 busname = self.isbus.findall(bus)[0]
+                
+                ## list all active sensors (/uncached/bus.x
                 for sensor in self.owfs.dir(bus):
-                    ## remove /uncached
+                    
+                    ## remove /uncached/bus.x from sensorname
                     sensor = sensor.split("/")[-1]
+                    
+                    ## check if it is really a sensor
                     if self.issensor.match(sensor):
+                        
                         self.debug("found Sensor %s at Bus %r" % (sensor,busname))
+                        
+                        ## Check fro supported sensor
                         sensortype=self.owfs.read(sensor+"/type")
                         interfaces = []
                         try:
+                            ## check if sensort is supported
                             interfaces = self.supportedsensors[sensortype]
-                            self.sensors[sensor] = {'type':sensortype,'interfaces':interfaces,'resolution':'10'}
+                            ### add it to the list of active sensors 
+                            ## FIXME: check for old sensor no longer active and remove
+                            
+                            
+                            self.sensors[sensor] = {
+                                'type':sensortype,
+                                'interfaces':interfaces,
+                                'resolution':'10' ## Resolution schould be read from Datastore
+                            }
+                        
                         except KeyError:
                             self.debug("unsupported Type: "+sensortype)
                             continue
@@ -58,28 +97,49 @@ class owfs_connector(Connector):
                             self.WG.errorlog()
 
 
-                
+                ## FIXME: what else do we need ..
+                ## FIXME: each connector should have a statistik function that has all relevant Data that must be put into rrd
                 self.debug("BUSTIME: "+str(self.owfs.read(bus+"/interface/statistics/bus_time")))
 
     
     def run(self):
         cnt = 10
         while self.isrunning:
+            ## every 10 runs search new sensors
             if cnt == 10:
                 cnt = 0
+                ## find new sensors
                 self.findsensors()
+            
+            ## read the sensors in the local-list
             self.read()
+            
             #self.debug(self.sensors)
+            
+            ## IDLE for cycletime seconds (default 15sec)
+            ## Fixme: maybe optimize cycletime dynamic based on busload
             self.idle(self.config['cycletime'])
+            
+            ## counter increment for sensorsearch
             cnt += 1
             
+
     def read(self):
+        ## loop through all sensors in lokal list
         for sensor in self.sensors.keys():
             #self.sensors[sensor]['power'] = self.owfs.read("/"+sensor+"/power")
+            
+            ## loop through their interfaces
             for get in self.sensors[sensor]['interfaces']:
+                
+                ## read uncached and put into local-list
                 self.sensors[sensor][get] = self.owfs.read("/uncached/"+sensor+"/"+get)
+                
+                ## make an id for the sensor (OW:28.043242a32_temperature
                 id = "OW:"+sensor+"_"+get
+                
                 try:
+                    ## only if there is any Data update it in the DATASTORE
                     if self.sensors[sensor][get]:
                         self.WG.DATASTORE.update(id,self.sensors[sensor][get])
                 except:
