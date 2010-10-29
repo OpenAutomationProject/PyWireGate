@@ -32,6 +32,11 @@ class WireGate(daemon.Daemon):
         self.watchdoglist = {}
         self.plugins = {}
         self.LOGGER = {}
+        
+        ## Get the path of this script
+        self.startpath = str(datastore).split( )[3][1:-15]
+        print self.startpath
+
         self.DATASTORE = datastore.datastore(self)
 
         self.readWireGateConfig()
