@@ -21,7 +21,7 @@ from connector import Connector
 import EIBConnection
 import select
 import BusMonitor
-
+import GroupSocket
 
 class knx_connector(Connector):
     CONNECTOR_NAME = 'KNX Connector'
@@ -33,11 +33,15 @@ class knx_connector(Connector):
 
         self.KNX = EIBConnection.EIBConnection()
         self.KNXBuffer = EIBConnection.EIBBuffer()
+        self.KNXSrc = EIBConnection.EIBAddr()
+        self.KNXDst = EIBConnection.EIBAddr()
         self.busmon = BusMonitor.busmonitor(WireGateInstance)
+        self.groupsocket = GroupSocket.groupsocket(WireGateInstance)
         
         ## Deafaultconfig
         defaultconfig = {
-            'url':'ip:127.0.0.1'
+            'url':'ip:127.0.0.1',
+            'parser' : 'groupsocket'
         }
         
         ## check Defaultconfig Options in main configfile
@@ -55,7 +59,12 @@ class knx_connector(Connector):
             try:
                 self.KNX.EIBSocketURL(self.config['url'])
                 self.KNX.EIB_Cache_Enable()
-                self.KNX.EIBOpenVBusmonitor_async()
+                if self.config['parser'] == "groupsocket":
+                    self.debug("Using Groupsocket parser")
+                    self.KNX.EIBOpen_GroupSocket_async(0)
+                else:
+                    self.debug("Using Busmonitor Parser")
+                    self.KNX.EIBOpenVBusmonitor_async()
                 
                 ## wait a second for the Busmon to activate
                 self.idle(1)
@@ -94,8 +103,14 @@ class knx_connector(Connector):
                     break
                 if iscomplete==1:
                     ## capture BusMon packets
-                    self.KNX.EIBGetBusmonitorPacket(self.KNXBuffer)
-                    ## Only decode packets larger than 7 octets
-                    if len(self.KNXBuffer.buffer) > 7 :
-                        self.busmon.decode(self.KNXBuffer.buffer)
+                    if self.config['parser'] == "groupsocket":
+                        self.KNX.EIBGetGroup_Src(self.KNXBuffer,self.KNXSrc,self.KNXDst)
+                        ## Only decode packets larger than 1 octet
+                        if len(self.KNXBuffer.buffer) > 1 :
+                            self.groupsocket.decode(self.KNXBuffer.buffer,self.KNXSrc.data,self.KNXDst.data)
+                    else:
+                        self.KNX.EIBGetBusmonitorPacket(self.KNXBuffer)
+                        ## Only decode packets larger than 7 octets
+                        if len(self.KNXBuffer.buffer) > 7 :
+                            self.busmon.decode(self.KNXBuffer.buffer)
                 
