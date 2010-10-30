@@ -120,7 +120,12 @@ class WireGate(daemon.Daemon):
             try:
                 if len(connector)>0:
                     ## Import Connector
-                    exec("import %s" % connector)
+                    try:
+                        exec("import %s" % connector)
+                    except:
+                        self.WG.errorlog(connector)
+                        self.log("unknown connector: %s" % connector,'error')
+                        continue
                     ## Load the Connector
                     exec("self.connectors['%s'] = %s.%s(self,name)" % (name,connector,connector))
             except:
