@@ -29,7 +29,7 @@ class datastore:
     def readgaconf(self):
         ga = self.WG.readConfig("/etc/wiregate/eibga.conf")
         for key in ga.keys():
-            obj = self.get("KNX:"+key)
+            obj = self.get("KNX:%s" % key)
             obj.dptid = ga[key]['dptsubid']
             obj.name = ga[key]['name']
     
@@ -118,7 +118,7 @@ class dataObject:
             namespace = ""
         
         ## Initial Name 
-        self.name = namespace +":unbekannt-"+time.strftime("%Y-%m-%d_%H:%M:%S")
+        self.name = "%s:unbekannt-%s" % (namespace, time.strftime("%Y-%m-%d_%H:%M:%S"))
         
         ## some defaults
         self.value = ""

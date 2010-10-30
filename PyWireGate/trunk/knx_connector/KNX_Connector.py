@@ -24,19 +24,29 @@ import BusMonitor
 
 
 class knx_connector(Connector):
-    connector_info = {'name':'KNX Connector','version':'0.1','logname':'knx_connector'}
-    def __init__(self,WireGateInstance):
+    CONNECTOR_NAME = 'KNX Connector'
+    CONNECTOR_VERSION = 0.2
+    CONNECTOR_LOGNAME = 'knx_connector'
+    def __init__(self,WireGateInstance, instanceName):
         self.WG = WireGateInstance
+        self.instanceName = instanceName
 
         self.KNX = EIBConnection.EIBConnection()
         self.KNXBuffer = EIBConnection.EIBBuffer()
         self.busmon = BusMonitor.busmonitor(WireGateInstance)
-        self.config = {}
-        try:
-            self.config = self.WG.config['KNX']
-            type(self.config['url'])
-        except KeyError:
-            self.config['url']='local:/tmp/eib'
+        
+        ## Deafaultconfig
+        defaultconfig = {
+            'url':'ip:127.0.0.1'
+        }
+        
+        ## check Defaultconfig Options in main configfile
+        self.WG.checkconfig(self.instanceName,defaultconfig)
+        
+        ## set local config
+        self.config = self.WG.config[self.instanceName]
+        
+        ## Start the Thread
         self.start()
 
     def run(self):
@@ -46,8 +56,9 @@ class knx_connector(Connector):
                 self.KNX.EIBSocketURL(self.config['url'])
                 self.KNX.EIB_Cache_Enable()
                 self.KNX.EIBOpenVBusmonitor_async()
+                
                 ## wait a second for the Busmon to activate
-                self.idle(0.5)
+                self.idle(1)
                 self._run()
                 try:
                     self.KNX.EIBClose()
@@ -55,8 +66,9 @@ class knx_connector(Connector):
                     self.WG.errorlog()
             except:
                 self.WG.errorlog()
-            self.debug("Socket Closed waiting 5 sec")
-            self.idle(5)
+            if self.isrunning:
+                self.debug("Socket %r Closed waiting 5 sec" % self.config['url'])
+                self.idle(5)
 
     def _run(self):
         while self.isrunning:
@@ -72,7 +84,9 @@ class knx_connector(Connector):
                 while True:
                     try:
                         iscomplete = self.KNX.EIB_Poll_Complete()
-                        break
+                        ### evtl. fixed das die abgehackten Telegramme
+                        if iscomplete==1:
+                            break
                     except:
                         pass
                 if not iscomplete:

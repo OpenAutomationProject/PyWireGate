@@ -24,48 +24,56 @@ import traceback
 import daemon
 import logging
 
+import ConfigParser
+
+
 import datastore
 
 class WireGate(daemon.Daemon):
     def __init__(self,REDIRECTIO=False):
         self.WG = self
         self.watchdoglist = {}
-        self.plugins = {}
+        self.connectors = {}
         self.LOGGER = {}
         
         ## Get the path of this script
         self.startpath = str(datastore).split( )[3][1:-15]
-        print self.startpath
 
+        ## Start the Datastore
         self.DATASTORE = datastore.datastore(self)
 
         self.readWireGateConfig()
+        
+        ## Start the Daemon
         daemon.Daemon.__init__(self,self.config['WireGate']['pidfile'],REDIRECTIO)
+
+
 
     def readWireGateConfig(self):
         self.config = self.readConfig("/etc/wiregate/pywiregate.conf")
-        try:
-            type(self.config['WireGate']['pidfile'])
-        except:
-            self.config['WireGate']['pidfile'] = "/usr/local/WireGate/wiregated.pid"
+        configdefault = {
+            'pidfile' : '/usr/local/WireGate/wiregated.pid',
+            'connector' : ''
+        }
+        
+        ## Remove this
+        if "plugins" in self.config['WireGate']:
+            self.log("deprecated Config: use 'connector' instead of plugin",'warning')
+
+        self.checkconfig("WireGate",configdefault)
         
 
 
+    def checkconfig(self,instance,defaults):
+        if instance not in self.config:
+            self.config[instance] = defaults
+            return
+        for cfg in defaults:
+            if cfg not in self.config[instance]:
+                self.config[instance][cfg] = defaults[cfg]
 
-    def isdaemon(self):
-        signal.signal(signal.SIGTERM,self._signalhandler)
-        signal.signal(signal.SIGHUP,self._signalhandler)
-
-    def _signalhandler(self,signum,frame):
-        if signum == signal.SIGHUP:
-            self.debug("LOGROTATE")
-        elif signum == signal.SIGTERM:
-            sys.exit(1)
-        else:
-            self.debug("Unknown Signal: "+str(signum))
 
     def readConfig(self,configfile):
-        import ConfigParser
         config = {}
         configparse = ConfigParser.SafeConfigParser()
         configparse.readfp(open(configfile))
@@ -80,30 +88,43 @@ class WireGate(daemon.Daemon):
                         config[section][opt] = configparse.getfloat(section,opt)
                     except ValueError:
                         config[section][opt] = configparse.get(section,opt)
+        
         return config
 
 
-    def shutdown(self):
-        #for dobj in self.DATASTORE.dataobjects.keys():
-        #    print dobj+": "+str(self.DATASTORE.dataobjects[dobj].getValue())
-        self.log("### Shutdown WireGated ###")
-        for instance in self.plugins.keys():
-            try:
-                self.plugins[instance].shutdown()
-            except:
-                pass
-                
-        ## now save Datastore
-        self.DATASTORE.save()
+
+
+    def isdaemon(self):
+        ## Called when in Daemon state
+        signal.signal(signal.SIGTERM,self._signalhandler)
+        signal.signal(signal.SIGHUP,self._signalhandler)
+
+    def _signalhandler(self,signum,frame):
+        if signum == signal.SIGHUP:
+            self.debug("LOGROTATE")
+        elif signum == signal.SIGTERM:
+            sys.exit(1)
+        else:
+            self.debug("Unknown Signal: %d  " % signum)
+
 
     def run(self):
         import time
-        for plugin in self.config['WireGate']['plugins'].split(","):
+        for configpart in self.config.keys():
+            if "connector" in self.config[configpart]:
+                name = configpart
+                connector = self.config[configpart]['connector']
+            else:
+                ## no connector in Section
+                continue
             try:
-                exec("import " +plugin)
-                exec("self.plugins['"+plugin+"'] = "+plugin+"."+plugin+"(self)")
+                if len(connector)>0:
+                    ## Import Connector
+                    exec("import %s" % connector)
+                    ## Load the Connector
+                    exec("self.connectors['%s'] = %s.%s(self,name)" % (name,connector,connector))
             except:
-                self.WG.errorlog(plugin)
+                self.WG.errorlog(connector)
                 pass
 
         if os.getuid() == 0:
@@ -111,33 +132,53 @@ class WireGate(daemon.Daemon):
             startuser=pwd.getpwuid(os.getuid())
             try:
                 runasuser=pwd.getpwnam(self.config['WireGate']['user'])
+        
                 ##Set Permissions
                 os.chown(self.config['WireGate']['pidfile'],runasuser[2],runasuser[3])
                 os.chown(self.config['WireGate']['logfile'],runasuser[2],runasuser[3])
                 os.setregid(runasuser[3],runasuser[3])
                 os.setreuid(runasuser[2],runasuser[2])
+        
                 self.log("Change User/Group from %s(%d) to %s(%d)" % (startuser[0],startuser[2],runasuser[0],runasuser[2]))
+            
             except KeyError:
                 pass
         if os.getuid()==0:
             self.log("\n### Run as root is not recommend\n### set user in pywiregate.conf\n\n")
+        
+        ## Mainloop only checking for Watchdog
         while True:
             time.sleep(5)
             self._checkwatchdog()
 
 
-    def getname(self):
-        return "WireGate"
-
+    ## always looping watchdog checker
     def _checkwatchdog(self):
         for obj in self.watchdoglist.keys():
             if time.time() > self.watchdoglist[obj]:
                     self.log("\n\nInstanz %s reagiert nicht\n\n" % obj,'error')
                     del self.watchdoglist[obj]
     
+    ## set Watchdog
     def watchdog(self,instance,wtime):
         self.watchdoglist[instance] = time.time()+wtime
+
+
+    def shutdown(self):
+        #for dobj in self.DATASTORE.dataobjects.keys():
+        #    print dobj+": "+str(self.DATASTORE.dataobjects[dobj].getValue())
+        self.log("### Shutdown WireGated ###")
+        for instance in self.connectors.keys():
+            try:
+                self.connectors[instance].shutdown()
+            except:
+                pass
+                
+        ## now save Datastore
+        self.DATASTORE.save()
+
     
+    ## Handle Errors
     def errorlog(self,msg=False):
         exc_type, exc_value, exc_traceback = sys.exc_info()
         tback = traceback.extract_tb(exc_traceback)
@@ -146,12 +187,12 @@ class WireGate(daemon.Daemon):
         if msg:
             print repr(msg)
         
-
+    ## TODO: Check COnfig for seperate Logfiles and min level for logging
     def createLog(self,instance):
         self.LOGFILES = ""
         return self.__createLog(instance)
 
-
+    ## Create the Loginstance
     def __createLog(self,instance,filename=False,maxlevel='debug'):
         LEVELS = {'debug': logging.DEBUG,'info': logging.INFO,'warning': logging.WARNING,'error': logging.ERROR,'critical': logging.CRITICAL}
         level = LEVELS.get(maxlevel, logging.NOTSET)
@@ -166,6 +207,7 @@ class WireGate(daemon.Daemon):
         #    logger.addHandler(console)
         return logger
 
+    ## Logger for all instances that check/create logger based on Configfile
     def log(self,msg,severity="info",instance="WireGate"):
         LEVELS = {'debug': logging.debug,'info': logging.info,'warning': logging.warning,'error': logging.error,'critical': logging.critical}
         level = LEVELS.get(severity, logging.info)
@@ -191,6 +233,7 @@ class WireGate(daemon.Daemon):
     def debug(self,msg):
         self.log(msg,"debug")
 
+    ## Decouple from dir to avoid unmount troubles
     def decouple(self):
         os.chdir("/usr/local/WireGate")
         os.umask(0)
@@ -198,7 +241,6 @@ class WireGate(daemon.Daemon):
 
 
 if __name__ == "__main__":
-
     try:
         import os
         import sys

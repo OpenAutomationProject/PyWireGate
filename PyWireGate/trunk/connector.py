@@ -2,15 +2,19 @@ import threading
 import time
 
 class Connector:
-    connector_info = {'name':'New Connector','version':'0.1','logname':__name__}
+    CONNECTOR_NAME = 'unnamed connector'
+    CONNECTOR_VERSION = 0.1
+    CONNECTOR_LOGNAME = __name__
+
     isrunning=False
-    def __init__(self,WireGateInstance):
+    def __init__(self,WireGateInstance,instanceName):
         self.WG = WireGateInstance
+        self.instanceName = instanceName
         """Overide"""
     def start(self):
-        self.log("%s starting up" % self.connector_info['name'],'info','WireGate')
+        self.log("%s (%s) starting up" % (self.CONNECTOR_NAME, self.instanceName) ,'info','WireGate')
         self.isrunning=True
-        self._thread = threading.Thread(target=self.run)
+        self._thread = threading.Thread(target=self.run,name=__name__)
         self._thread.setDaemon(1)
         self._thread.start()
 
@@ -19,11 +23,11 @@ class Connector:
         
     def log(self,msg,severity='info',instance=False):
         if not instance:
-            instance = self.connector_info['logname']
+            instance = self.CONNECTOR_LOGNAME
         self.WG.log(msg,severity,instance)
 
     def shutdown(self):
-        self.log("%s shutting down" % self.connector_info['name'],'info','WireGate')
+        self.log("%s (%s) shutting down" % (self.CONNECTOR_NAME, self.instanceName) ,'info','WireGate')
         self.isrunning=False
         self._thread.join(2)
         if self._thread.isAlive():

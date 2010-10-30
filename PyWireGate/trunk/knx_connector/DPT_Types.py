@@ -21,7 +21,8 @@
 ### sondern als LIST mit den dezimalen Werten ist das decode hier ein bischen angepasst
 
 class dpt_type:
-    def __init__(self):
+    def __init__(self,WireGateInstance=False):
+        self.WG = WireGateInstance
         self.DECODER = {
             1:self.decodeDPT1,       # EIS 1/7       / 1 bit  0=Aus/1=Ein
             2:self.decodeDPT2,       # EIS 8         / 2 bit  0,1=Frei/2=Prio_Aus/3=Prio_Ein
@@ -56,8 +57,7 @@ class dpt_type:
             dpt = self.guessType(raw)
             if dsobj:
                 dsobj.dptid = dpt
-            self.debug("Guessed:"+str(dpt))
-            print "Guessed:"+str(dpt)
+            self.debug("Guessed: %f" % dpt)
         if dpt == 0:
             return raw
         return self._decode(raw,dpt)
@@ -79,6 +79,7 @@ class dpt_type:
         __import__('traceback').print_exc(file=__import__('sys').stdout)
 
     def debug(self,msg):
+        #print msg
         pass
 
     def toBigInt(self,raw):

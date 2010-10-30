@@ -30,13 +30,18 @@ import re
 
 
 class comet_server(ConnectorServer):
-    connector_info = {'name':'Comet Server','version':'0.1','logname':'comet_server'}
-    def __init__(self,wiregate):
-        self.WG = wiregate
-        try:
-            config = self.WG.config['CometServer']
-        except KeyError:
-            config = {'port':4498}
+    CONNECTOR_NAME = 'Comet Server'
+    CONNECTOR_VERSION = 0.1
+    CONNECTOR_LOGNAME = 'comet_server'
+    def __init__(self,WireGateInstance, instanceName):
+        self.WG = WireGateInstance
+        self.instanceName = instanceName
+        defaultconfig = {
+            'port' : 4498
+        }
+        
+        self.WG.checkconfig(self.instanceName,defaultconfig)
+        config = self.WG.config[self.instanceName]
         ConnectorServer.__init__(self,("0.0.0.0",config['port']),CometRequestHandler )
         self.start()
         
