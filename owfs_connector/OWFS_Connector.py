@@ -195,7 +195,7 @@ class owfs_connector(Connector):
                 except:
                     self.WG.errorlog()
         self.busmaster[busname]['readthread'] = None
-        self.debug("Thread for %s finshed in % f secs " % (busname,time.time() - readtime))
+        self.debug("Thread for %s finshed reading %d sensors in % f secs " % (busname,len(self.busmaster[busname]['sensors']), time.time() - readtime))
                     
     def read(self):
         for busname in self.busmaster.keys():
