@@ -43,6 +43,8 @@ class WireGate(daemon.Daemon):
 
         self.readWireGateConfig()
 
+        self.ErrorLOGGER = self.__createLog("WireGateErr",filename=self.config['WireGate']['errorlog'],maxlevel='error')
+        
         ## Start the Datastore
         self.DATASTORE = datastore.datastore(self)
 
@@ -54,9 +56,10 @@ class WireGate(daemon.Daemon):
 
     def readWireGateConfig(self):
         self.config = self.readConfig("/etc/wiregate/pywiregate.conf")
-        configdefault = {
-            'pidfile' : "%swiregated.pid" % self.scriptpath,
-            'logfile' : "%swiregated.log" % self.scriptpath,
+        defaultconfig = {
+            'pidfile' : "%s/wiregated.pid" % self.scriptpath,
+            'logfile' : "%s/wiregated.log" % self.scriptpath,
+            'errorlog' : "%s/wiregated-error.log" % self.scriptpath,
             'loglevel': 'info'
         }
         
@@ -64,7 +67,7 @@ class WireGate(daemon.Daemon):
         if "plugins" in self.config['WireGate']:
             self.log("old Config",'critical')
 
-        self.checkconfig("WireGate",configdefault)
+        self.checkconfig("WireGate",defaultconfig)
         
 
 
@@ -191,10 +194,16 @@ class WireGate(daemon.Daemon):
     def errorlog(self,msg=False):
         exc_type, exc_value, exc_traceback = sys.exc_info()
         tback = traceback.extract_tb(exc_traceback)
-        print tback
-        print exc_type, exc_value
+        #type(self.ErrorLOGGER)
+        #print tback
+        #print exc_type, exc_value
         if msg:
-            print repr(msg)
+            #print repr(msg)
+            self.ErrorLOGGER.error(repr(msg))
+        errmsg = "%r %r %r" % (exc_type, exc_value,tback)
+        self.ErrorLOGGER.error(errmsg)
+    
+
         
     ## TODO: Check COnfig for seperate Logfiles and min level for logging
     def createLog(self,instance):
@@ -219,19 +228,19 @@ class WireGate(daemon.Daemon):
         LEVELS = {'debug': logging.DEBUG,'info': logging.INFO,'warning': logging.WARNING,'error': logging.ERROR,'critical': logging.CRITICAL}
         level = LEVELS.get(maxlevel, logging.NOTSET)
         # create logger
+
+        formatter = logging.Formatter('%(asctime)s %(name)-12s: %(levelname)-8s %(message)s')
+        logger = logging.getLogger(instance)
+        logger.setLevel(level)
         if filename:
-            print "logto file %s" %filename
             ## python handle logrotating
-            handler = logging.handlers.TimedRotatingFileHandler(filename,'midnight')
+            handler = logging.handlers.TimedRotatingFileHandler(filename,'midnight',backupCount=7)
             
             ## Handler if logrotate handles Logfiles
             #handler = logging.handlers.WatchedFileHandle(filename)
-                    
-        formatter = logging.Formatter('%(asctime)s %(name)-12s: %(levelname)-8s %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
 
-        logger = logging.getLogger(instance)
-        logger.setLevel(level)
-        logger.addHandler(handler)
 
         # create console handler and set level to debug
         if self.REDIRECTIO:
@@ -242,7 +251,7 @@ class WireGate(daemon.Daemon):
 
     ## Logger for all instances that check/create logger based on Configfile
     def log(self,msg,severity="info",instance="WireGate"):
-        LEVELS = {'debug': logging.debug,'info': logging.info,'warning': logging.warning,'error': logging.error,'critical': logging.critical}
+        LEVELS = {'debug': logging.debug,'info': logging.info,'warning': logging.warning,'warn': logging.warning,'error': logging.error,'critical': logging.critical}
         level = LEVELS.get(severity, logging.info)
         try:
             logger = self.LOGGER[instance]
@@ -268,7 +277,7 @@ class WireGate(daemon.Daemon):
 
     ## Decouple from dir to avoid unmount troubles
     def decouple(self):
-        os.chdir("/usr/local/WireGate")
+        os.chdir("/")
         os.umask(0)
 
 
@@ -315,7 +324,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
         print "Exiting"
-        print "I am %d " % os.getuid()
         sys.exit(0)
 
 
