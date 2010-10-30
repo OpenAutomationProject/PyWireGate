@@ -22,7 +22,6 @@ class Daemon:
     def __init__(self, pidfile, REDIRECTIO=True):
         self.pidfile = pidfile
         self.REDIRECTIO = REDIRECTIO
-        self.STARTDIR = os.getcwd()
         
 
     def daemonize(self):

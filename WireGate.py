@@ -23,6 +23,7 @@ import signal
 import traceback
 import daemon
 import logging
+import logging.handlers
 
 import ConfigParser
 
@@ -35,14 +36,16 @@ class WireGate(daemon.Daemon):
         self.watchdoglist = {}
         self.connectors = {}
         self.LOGGER = {}
+        self.REDIRECTIO = REDIRECTIO
         
         ## Get the path of this script
-        self.startpath = str(datastore).split( )[3][1:-15]
+        self.scriptpath = str(datastore).split( )[3][1:-15]
+
+        self.readWireGateConfig()
 
         ## Start the Datastore
         self.DATASTORE = datastore.datastore(self)
 
-        self.readWireGateConfig()
         
         ## Start the Daemon
         daemon.Daemon.__init__(self,self.config['WireGate']['pidfile'],REDIRECTIO)
@@ -52,13 +55,14 @@ class WireGate(daemon.Daemon):
     def readWireGateConfig(self):
         self.config = self.readConfig("/etc/wiregate/pywiregate.conf")
         configdefault = {
-            'pidfile' : '/usr/local/WireGate/wiregated.pid',
-            'connector' : ''
+            'pidfile' : "%swiregated.pid" % self.scriptpath,
+            'logfile' : "%swiregated.log" % self.scriptpath,
+            'loglevel': 'info'
         }
         
-        ## Remove this
+        ## Remove this later
         if "plugins" in self.config['WireGate']:
-            self.log("deprecated Config: use 'connector' instead of plugin",'warning')
+            self.log("old Config",'critical')
 
         self.checkconfig("WireGate",configdefault)
         
@@ -194,22 +198,46 @@ class WireGate(daemon.Daemon):
         
     ## TODO: Check COnfig for seperate Logfiles and min level for logging
     def createLog(self,instance):
-        self.LOGFILES = ""
-        return self.__createLog(instance)
+        try:
+            loglevel = self.config[instance]['loglevel']
+        except:
+            loglevel = False
+
+        try:
+            filename = self.config[instance]['logfile']
+        except:
+            filename = False
+
+        return self.__createLog(instance,filename=filename,maxlevel=loglevel)
 
     ## Create the Loginstance
-    def __createLog(self,instance,filename=False,maxlevel='debug'):
+    def __createLog(self,instance,filename=False,maxlevel=False):
+        if not maxlevel:
+            maxlevel = self.config['WireGate']['loglevel']
+        if not filename:
+            filename = self.config['WireGate']['logfile']
         LEVELS = {'debug': logging.DEBUG,'info': logging.INFO,'warning': logging.WARNING,'error': logging.ERROR,'critical': logging.CRITICAL}
         level = LEVELS.get(maxlevel, logging.NOTSET)
         # create logger
-        logging.basicConfig(level=level,format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',datefmt='%Y-%m-%d %H:%M:%S')
+        if filename:
+            print "logto file %s" %filename
+            ## python handle logrotating
+            handler = logging.handlers.TimedRotatingFileHandler(filename,'midnight')
+            
+            ## Handler if logrotate handles Logfiles
+            #handler = logging.handlers.WatchedFileHandle(filename)
+                    
+        formatter = logging.Formatter('%(asctime)s %(name)-12s: %(levelname)-8s %(message)s')
+
         logger = logging.getLogger(instance)
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(level)
+        logger.addHandler(handler)
 
         # create console handler and set level to debug
-        #if not self.REDIRECTIO:
-        #    console = logging.StreamHandler()
-        #    logger.addHandler(console)
+        if self.REDIRECTIO:
+            console = logging.StreamHandler()
+            console.setFormatter(formatter)            
+            logger.addHandler(console)
         return logger
 
     ## Logger for all instances that check/create logger based on Configfile
@@ -287,6 +315,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
         print "Exiting"
+        print "I am %d " % os.getuid()
         sys.exit(0)
 
 
