@@ -1,5 +1,5 @@
 import time
-import thread
+import threading
 
 
 class datastore:
@@ -107,8 +107,8 @@ class dataObject:
         self.WG = WireGateInstance
         
         ## Threadlocking
-        self.write_mutex = thread.allocate_lock()
-        self.read_mutex = thread.allocate_lock()
+        self.write_mutex = threading.RLock()
+        self.read_mutex = threading.RLock()
         ## check for namespace
         namespace = id.split(":",1)
         if len(namespace)>1:
