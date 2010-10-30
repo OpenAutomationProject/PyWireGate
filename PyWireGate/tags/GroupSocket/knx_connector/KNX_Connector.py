@@ -20,7 +20,7 @@
 from connector import Connector
 import EIBConnection
 import select
-import BusMonitor
+import GroupSocket
 
 
 class knx_connector(Connector):
@@ -30,7 +30,9 @@ class knx_connector(Connector):
 
         self.KNX = EIBConnection.EIBConnection()
         self.KNXBuffer = EIBConnection.EIBBuffer()
-        self.busmon = BusMonitor.busmonitor(WireGateInstance)
+        self.KNXSrc = EIBConnection.EIBAddr()
+        self.KNXDst = EIBConnection.EIBAddr()
+        self.groupsocket = GroupSocket.groupsocket(WireGateInstance)
         self.config = {}
         try:
             self.config = self.WG.config['KNX']
@@ -45,8 +47,9 @@ class knx_connector(Connector):
             try:
                 self.KNX.EIBSocketURL(self.config['url'])
                 self.KNX.EIB_Cache_Enable()
-                self.KNX.EIBOpenVBusmonitor_async()
+                self.KNX.EIBOpen_GroupSocket_async(0)
                 ## wait a second for the Busmon to activate
+                ##FIXME: really needed?
                 self.idle(0.5)
                 self._run()
                 try:
@@ -79,9 +82,9 @@ class knx_connector(Connector):
                     ## Eibd closed connection
                     break
                 if iscomplete==1:
-                    ## capture BusMon packets
-                    self.KNX.EIBGetBusmonitorPacket(self.KNXBuffer)
+                    ## capture GroupSocket packets
+                    self.KNX.EIBGetGroup_Src(self.KNXBuffer,self.KNXSrc,self.KNXDst)
                     ## Only decode packets larger than 7 octets
-                    if len(self.KNXBuffer.buffer) > 7 :
-                        self.busmon.decode(self.KNXBuffer.buffer)
+                    if len(self.KNXBuffer.buffer) > 1 :
+                        self.groupsocket.decode(self.KNXBuffer.buffer,self.KNXSrc.data,self.KNXDst.data)
                 
