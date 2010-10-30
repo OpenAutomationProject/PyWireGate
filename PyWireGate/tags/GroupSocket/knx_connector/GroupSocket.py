@@ -65,16 +65,16 @@ class groupsocket:
                         ## search Datastoreobject
                         dsobj = self.WG.DATASTORE.get(id)
                         ## Decode the DPT Value
-                        if (type(buf[2])):
+                        if (len(buf) >2):
                             msg['value'] = self.dpt.decode( buf[2:],dsobj=dsobj)
                         else:
-                            msg['value'] = self.dpt.decode( buf[1] & 0x3F,dsobj=dsobj)
+                            msg['value'] = self.dpt.decode( [buf[1] & 0x3F],dsobj=dsobj)
                         ## update Object in Datastore
                         self.WG.DATASTORE.update(id,msg['value'])
         except:
             self.errormsg(msg)
 
-        self.debug(msg)
+        #self.debug(msg)
         
         return msg
 
