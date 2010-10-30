@@ -31,16 +31,21 @@ class ConsoleRequestHandler(SocketServer.StreamRequestHandler):
 
 
 class console_server(ConnectorServer):
-    connector_info = {'name':'Console Server','version':'0.1','logname':'console_server'}
-    def __init__(self,wiregate):
-        self.WG = wiregate
-        try:
-            config = self.WG.config['ConsoleServer']
-        except KeyError:
-            config = {'port':4401}
+    CONNECTOR_NAME = 'Console Server'
+    CONNECTOR_VERSION = 0.1
+    CONNECTOR_LOGNAME = 'console_server'
 
+    def __init__(self,WireGateInstance, instanceName):
+        self.WG = WireGateInstance
+        self.instanceName = instanceName
+        defaultconfig = {
+            'port' : 4401
+        }
+        self.WG.checkconfig(self.instanceName,defaultconfig)
+        config = self.WG.config['ConsoleServer']
         ConnectorServer.__init__(self,("0.0.0.0",config['port']),ConsoleRequestHandler )
         self.start()
+
     def getcmd(self,cmd,client):
         if len(cmd)==0:
             return ""
@@ -60,19 +65,19 @@ class console_server(ConnectorServer):
             print "command"+command
             if command=="list":
                 ret = ""
-                for plug in self.WG.plugins.keys():
-                    ret +=plug+"\n"
+                for connector in self.WG.connectors.keys():
+                    ret += "%s\n" % connector
                 return ret
             if command=="stop":
                 try:
-                    self.WG.plugins[name].shutdown()
+                    self.WG.connectors[name].shutdown()
                     return "Done\n"
                 except:
                     pass
                     return "Failed\n"
             if command=="start":
                 try:
-                    self.WG.plugins[name].start()
+                    self.WG.connectors[name].start()
                     return "Done\n"
                 except:
                     pass

@@ -23,20 +23,27 @@ import threading
 import time
 
 class owfs_connector(Connector):
-    connector_info = {'name':'OWFS Connector','version':'0.1','logname':'owfs_connector'}
-    def __init__(self,WireGateInstance):
+    CONNECTOR_NAME = 'OWFS Connector'
+    CONNECTOR_VERSION = 0.1
+    CONNECTOR_LOGNAME = 'owfs_connector'
+    def __init__(self,WireGateInstance, instanceName):
         self.WG = WireGateInstance
-        try:
-            self.config = self.WG.config['owfs']
-        except KeyError:
-            self.config = {'cycletime':15}
+        self.instanceName = instanceName
         
-        ## onyl localhost FIXME: accept for remote host?
-        self.owfs = connection.Connection()
+        defaultconfig = {
+            'cycletime' : 15,
+            'server' : '127.0.0.1',
+            'port' : 4304
+        }
+        self.WG.checkconfig(self.instanceName,defaultconfig)
+        self.config = self.WG.config[instanceName]
+        
+        ## OWFS Connection
+        self.owfs = connection.Connection(server=self.config['server'], port=self.config['port'])
         
         ## some regex for identifying Sensors and busses
         self.issensor = re.compile(r"[0-9][0-9]\x2E[0-9a-fA-F]+")
-        self.isbus = re.compile(r"\x2Fbus\x2E[0-9]+$", re.MULTILINE)
+        self.isbus = re.compile(r"\x2Fbus\x2E([0-9])+$", re.MULTILINE)
         
         ## Sensors and their interfaces .. maybe import from a config file ?
         self.supportedsensors = { 
@@ -58,7 +65,6 @@ class owfs_connector(Connector):
         self.sensors = {}
         self.start()
 
-
     def run(self):
         cnt = 10
         while self.isrunning:
@@ -67,7 +73,11 @@ class owfs_connector(Connector):
                 cnt = 0
                 ## find new sensors
                 #self.findsensors()
-                self.findbusmaster()
+                try:
+                    self.findbusmaster()
+                except:
+                    ## ignore OWFS Errors
+                    pass
             
             ## read the sensors in the local-list
             self.read()
@@ -87,41 +97,50 @@ class owfs_connector(Connector):
     def findbusmaster(self,path=""):
         ## search for active busses
         nochilds = True
-        for bus in self.owfs.dir("/uncached"+path):
+        uncachedpath = "/uncached%s" % path
+        for bus in self.owfs.dir(uncachedpath):
             bus = bus[9:]
             if self.isbus.search(bus):
                 nochilds = False
                 ## get the bus ID
                 busname = self.isbus.search(bus)
                 if busname:
-                    if self.findbusmaster(bus):
-                        ## if this has no subbuses add it to the list
-                        try:
-                            ## check if bus already in list and set time
-                            self.busmaster[bus]['lastseen'] = time.time()
-                        except KeyError:
-                            ## add to list
-                            self.busmaster[bus] = {
-                                'sensors' : {},
-                                'lastseen' : time.time(),
-                                'readthread' : None
-                            }
-                        self.findsensors(bus)
+                    try:
+                        if self.findbusmaster(bus):
+                            ## if this has no subbuses add it to the list
+                            try:
+                                ## check if bus already in list and set time
+                                self.busmaster[bus]['lastseen'] = time.time()
+                            except KeyError:
+                                ## add to list
+                                self.busmaster[bus] = {
+                                    'sensors' : {},
+                                    'lastseen' : time.time(),
+                                    'readthread' : None
+                                }
+                            self.findsensors(bus)
+                    except:
+                        ## ignore all OWFS Errors
+                        pass
         return nochilds
 
 
 
     def findsensors(self,path=""):
-        for sensor in self.owfs.dir("/uncached"+path):
+        uncachedpath = "/uncached%s" % path
+        for sensor in self.owfs.dir(uncachedpath):
             ## remove /uncached/bus.x from sensorname
             sensor = sensor.split("/")[-1]
             ## check if it is really a sensor
             if self.issensor.match(sensor):
                 
                 self.debug("found Sensor %s at Bus %r" % (sensor,path))
-                
-                ## Check for supported sensor
-                sensortype=self.owfs.read(sensor+"/type")
+                try:
+                    ## Check for supported sensor
+                    sensortype=self.owfs.read("%s/type" % sensor)
+                except:
+                    ## ignore all OWFS Errors
+                    continue
                 interfaces = []
                 try:
                     ## check if sensort is supported
@@ -135,7 +154,7 @@ class owfs_connector(Connector):
                     }
                 
                 except KeyError:
-                    self.debug("unsupported Type: "+sensortype)
+                    self.debug("unsupported Type: %r" % sensortype)
                     continue
                 except:
                     self.WG.errorlog()
@@ -152,12 +171,22 @@ class owfs_connector(Connector):
             
             ## loop through their interfaces
             for get in self.busmaster[busname]['sensors'][sensor]['interfaces']:
-                
-                ## read uncached and put into local-list
-                self.busmaster[busname]['sensors'][sensor][get] = self.owfs.read("/uncached/"+sensor+"/"+get)
-                
-                ## make an id for the sensor (OW:28.043242a32_temperature
+                resolution = ""
                 id = "OW:"+sensor+"_"+get
+
+                ## get the Datastore Object and look for config
+                obj = self.WG.DATASTORE.get(id)
+                if "resolution" in obj.config:
+                    resolution = obj.config['resolution']
+                    
+                owfspath = "/uncached/%s/%s%s" % (sensor,get,resolution)
+                try:
+                    ## read uncached and put into local-list
+                    self.busmaster[busname]['sensors'][sensor][get] = self.owfs.read(owfspath)
+                except:
+                    ## ignore all OWFS Errors
+                    self.debug("Reading from path %s failed" % owfspath)
+                ## make an id for the sensor (OW:28.043242a32_temperature
                 
                 try:
                     ## only if there is any Data update it in the DATASTORE
@@ -173,6 +202,7 @@ class owfs_connector(Connector):
             if len(self.busmaster[busname]['sensors'])>0:
                 if not self.busmaster[busname]['readthread']:
                     self.debug("Start read Thread for %s" % busname)
-                    self.busmaster[busname]['readthread'] = threading.Thread(target=self._read,args=[busname])
+                    threadname = "OWFS-Reader_%s" % busname
+                    self.busmaster[busname]['readthread'] = threading.Thread(target=self._read,args=[busname],name=threadname)
                     self.busmaster[busname]['readthread'].start()
                 
