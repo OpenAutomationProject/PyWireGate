@@ -19,6 +19,8 @@
 from connector import Connector
 import connection
 import re
+import threading
+import time
 
 class owfs_connector(Connector):
     connector_info = {'name':'OWFS Connector','version':'0.1','logname':'owfs_connector'}
@@ -34,7 +36,7 @@ class owfs_connector(Connector):
         
         ## some regex for identifying Sensors and busses
         self.issensor = re.compile(r"[0-9][0-9]\x2E[0-9a-fA-F]+")
-        self.isbus = re.compile(r".*?\x2Fbus\x2E([0-9]+)")
+        self.isbus = re.compile(r"\x2Fbus\x2E[0-9]+$", re.MULTILINE)
         
         ## Sensors and their interfaces .. maybe import from a config file ?
         self.supportedsensors = { 
@@ -52,56 +54,11 @@ class owfs_connector(Connector):
         }
         
         ## Local-list for the sensors
+        self.busmaster = {}
         self.sensors = {}
         self.start()
 
-    def findsensors(self):
-        ## search for active busses
-        for bus in self.owfs.dir("/uncached"):
-            if self.isbus.match(bus):
-                
-                ## get the bus ID
-                busname = self.isbus.findall(bus)[0]
-                
-                ## list all active sensors (/uncached/bus.x
-                for sensor in self.owfs.dir(bus):
-                    
-                    ## remove /uncached/bus.x from sensorname
-                    sensor = sensor.split("/")[-1]
-                    
-                    ## check if it is really a sensor
-                    if self.issensor.match(sensor):
-                        
-                        self.debug("found Sensor %s at Bus %r" % (sensor,busname))
-                        
-                        ## Check fro supported sensor
-                        sensortype=self.owfs.read(sensor+"/type")
-                        interfaces = []
-                        try:
-                            ## check if sensort is supported
-                            interfaces = self.supportedsensors[sensortype]
-                            ### add it to the list of active sensors 
-                            ## FIXME: check for old sensor no longer active and remove
-                            
-                            
-                            self.sensors[sensor] = {
-                                'type':sensortype,
-                                'interfaces':interfaces,
-                                'resolution':'10' ## Resolution schould be read from Datastore
-                            }
-                        
-                        except KeyError:
-                            self.debug("unsupported Type: "+sensortype)
-                            continue
-                        except:
-                            self.WG.errorlog()
 
-
-                ## FIXME: what else do we need ..
-                ## FIXME: each connector should have a statistik function that has all relevant Data that must be put into rrd
-                self.debug("BUSTIME: "+str(self.owfs.read(bus+"/interface/statistics/bus_time")))
-
-    
     def run(self):
         cnt = 10
         while self.isrunning:
@@ -109,7 +66,8 @@ class owfs_connector(Connector):
             if cnt == 10:
                 cnt = 0
                 ## find new sensors
-                self.findsensors()
+                #self.findsensors()
+                self.findbusmaster()
             
             ## read the sensors in the local-list
             self.read()
@@ -124,25 +82,97 @@ class owfs_connector(Connector):
             cnt += 1
             
 
-    def read(self):
-        ## loop through all sensors in lokal list
-        for sensor in self.sensors.keys():
+
+
+    def findbusmaster(self,path=""):
+        ## search for active busses
+        nochilds = True
+        for bus in self.owfs.dir("/uncached"+path):
+            bus = bus[9:]
+            if self.isbus.search(bus):
+                nochilds = False
+                ## get the bus ID
+                busname = self.isbus.search(bus)
+                if busname:
+                    if self.findbusmaster(bus):
+                        ## if this has no subbuses add it to the list
+                        try:
+                            ## check if bus already in list and set time
+                            self.busmaster[bus]['lastseen'] = time.time()
+                        except KeyError:
+                            ## add to list
+                            self.busmaster[bus] = {
+                                'sensors' : {},
+                                'lastseen' : time.time(),
+                                'readthread' : None
+                            }
+                        self.findsensors(bus)
+        return nochilds
+
+
+
+    def findsensors(self,path=""):
+        for sensor in self.owfs.dir("/uncached"+path):
+            ## remove /uncached/bus.x from sensorname
+            sensor = sensor.split("/")[-1]
+            ## check if it is really a sensor
+            if self.issensor.match(sensor):
+                
+                self.debug("found Sensor %s at Bus %r" % (sensor,path))
+                
+                ## Check for supported sensor
+                sensortype=self.owfs.read(sensor+"/type")
+                interfaces = []
+                try:
+                    ## check if sensort is supported
+                    interfaces = self.supportedsensors[sensortype]
+                    ### add it to the list of active sensors 
+                    ## FIXME: check for old sensor no longer active and remove
+                    self.busmaster[path]['sensors'][sensor] = {
+                        'type':sensortype,
+                        'interfaces':interfaces,
+                        'resolution':'10' ## Resolution schould be read from Datastore
+                    }
+                
+                except KeyError:
+                    self.debug("unsupported Type: "+sensortype)
+                    continue
+                except:
+                    self.WG.errorlog()
+
+
+    
+
+    def _read(self,busname):
+        ## loop through all sensors in lokal busmaster list
+        self.debug("Thread running for %s" % busname)
+        readtime = time.time()
+        for sensor in self.busmaster[busname]['sensors'].keys():
             #self.sensors[sensor]['power'] = self.owfs.read("/"+sensor+"/power")
             
             ## loop through their interfaces
-            for get in self.sensors[sensor]['interfaces']:
+            for get in self.busmaster[busname]['sensors'][sensor]['interfaces']:
                 
                 ## read uncached and put into local-list
-                self.sensors[sensor][get] = self.owfs.read("/uncached/"+sensor+"/"+get)
+                self.busmaster[busname]['sensors'][sensor][get] = self.owfs.read("/uncached/"+sensor+"/"+get)
                 
                 ## make an id for the sensor (OW:28.043242a32_temperature
                 id = "OW:"+sensor+"_"+get
                 
                 try:
                     ## only if there is any Data update it in the DATASTORE
-                    if self.sensors[sensor][get]:
-                        self.WG.DATASTORE.update(id,self.sensors[sensor][get])
+                    if self.busmaster[busname]['sensors'][sensor][get]:
+                        self.WG.DATASTORE.update(id,self.busmaster[busname]['sensors'][sensor][get])
                 except:
-                    self.WG.errorlog(msg)
-
+                    self.WG.errorlog()
+        self.busmaster[busname]['readthread'] = None
+        self.debug("Thread for %s finshed in % f secs " % (busname,time.time() - readtime))
                     
+    def read(self):
+        for busname in self.busmaster.keys():
+            if len(self.busmaster[busname]['sensors'])>0:
+                if not self.busmaster[busname]['readthread']:
+                    self.debug("Start read Thread for %s" % busname)
+                    self.busmaster[busname]['readthread'] = threading.Thread(target=self._read,args=[busname])
+                    self.busmaster[busname]['readthread'].start()
+                
