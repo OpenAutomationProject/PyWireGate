@@ -185,7 +185,7 @@ class owfs_connector(Connector):
                     self.busmaster[busname]['sensors'][sensor][get] = self.owfs.read(owfspath)
                 except:
                     ## ignore all OWFS Errors
-                    self.debug("Reading from path %s failed" % owfspath)
+                    self.WG.errorlog("Reading from path %s failed" % owfspath)                    
                 ## make an id for the sensor (OW:28.043242a32_temperature
                 
                 try:
