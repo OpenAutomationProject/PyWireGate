@@ -23,7 +23,7 @@ class Connector:
         
     def log(self,msg,severity='info',instance=False):
         if not instance:
-            instance = self.CONNECTOR_LOGNAME
+            instance = self.instanceName
         self.WG.log(msg,severity,instance)
 
     def shutdown(self):
