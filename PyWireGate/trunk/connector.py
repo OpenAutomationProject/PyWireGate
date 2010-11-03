@@ -47,6 +47,10 @@ class Connector:
             pass
             
 
+    def setValue(self, dsobj):
+        self.log("unconfigured setValue in %r called for %s" % (self,dsobj.name) ,'warn','WireGate')
+        pass
+
 import SocketServer
 import socket
 class ConnectorServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer,Connector):

@@ -58,6 +58,7 @@ class WireGate(daemon.Daemon):
         self.config = self.readConfig("/etc/wiregate/pywiregate.conf")
         defaultconfig = {
             'pidfile' : "%s/wiregated.pid" % self.scriptpath,
+            'datastore' : "%s/datastore.db" % self.scriptpath,
             'logfile' : "%s/wiregated.log" % self.scriptpath,
             'errorlog' : "%s/wiregated-error.log" % self.scriptpath,
             'loglevel': 'info'
@@ -148,6 +149,7 @@ class WireGate(daemon.Daemon):
                 ##Set Permissions
                 os.chown(self.config['WireGate']['pidfile'],runasuser[2],runasuser[3])
                 os.chown(self.config['WireGate']['logfile'],runasuser[2],runasuser[3])
+                os.chown(self.config['WireGate']['datastore'],runasuser[2],runasuser[3])
                 os.setregid(runasuser[3],runasuser[3])
                 os.setreuid(runasuser[2],runasuser[2])
         
@@ -251,8 +253,6 @@ class WireGate(daemon.Daemon):
 
     ## Logger for all instances that check/create logger based on Configfile
     def log(self,msg,severity="info",instance="WireGate"):
-        LEVELS = {'debug': logging.debug,'info': logging.info,'warning': logging.warning,'warn': logging.warning,'error': logging.error,'critical': logging.critical}
-        level = LEVELS.get(severity, logging.info)
         try:
             logger = self.LOGGER[instance]
         except KeyError:
@@ -262,7 +262,11 @@ class WireGate(daemon.Daemon):
             logger.debug(msg)
         elif severity=="info":
             logger.info(msg)
+        elif severity=="notice":
+            logger.info(msg)
         elif severity=="warning":
+            logger.warning(msg)
+        elif severity=="warn":
             logger.warning(msg)
         elif severity=="error":
             logger.error(msg)
