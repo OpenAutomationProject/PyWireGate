@@ -35,8 +35,8 @@ class knx_connector(Connector):
         self.KNXBuffer = EIBConnection.EIBBuffer()
         self.KNXSrc = EIBConnection.EIBAddr()
         self.KNXDst = EIBConnection.EIBAddr()
-        self.busmon = BusMonitor.busmonitor(WireGateInstance)
-        self.groupsocket = GroupSocket.groupsocket(WireGateInstance)
+        self.busmon = BusMonitor.busmonitor(WireGateInstance,self)
+        self.groupsocket = GroupSocket.groupsocket(WireGateInstance,self)
         
         ## Deafaultconfig
         defaultconfig = {
@@ -82,7 +82,7 @@ class knx_connector(Connector):
     def _run(self):
         while self.isrunning:
             ## Check if we are alive and responde until 10 secs
-            self.WG.watchdog("knx_connector",10)
+            self.WG.watchdog(self.instanceName,10)
             try:
                 vbusmonin, vbusmonout, vbusmonerr = select.select([self.KNX.EIB_Poll_FD()],[],[],1)
             except:
@@ -114,3 +114,7 @@ class knx_connector(Connector):
                         if len(self.KNXBuffer.buffer) > 7 :
                             self.busmon.decode(self.KNXBuffer.buffer)
                 
+
+
+    def send(self,dsobj):
+        print "SEND to %s" % dsobj.name

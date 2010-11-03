@@ -21,7 +21,7 @@
 ### sondern als LIST mit den dezimalen Werten ist das decode hier ein bischen angepasst
 
 class dpt_type:
-    def __init__(self,WireGateInstance=False):
+    def __init__(self,WireGateInstance):
         self.WG = WireGateInstance
         self.DECODER = {
             1:self.decodeDPT1,       # EIS 1/7       / 1 bit  0=Aus/1=Ein
@@ -50,7 +50,8 @@ class dpt_type:
         if dptid > 0:
             dpt = dptid
         elif dsobj:
-            dpt = dsobj.dptid
+            if "dptid" in dsobj.config:
+                dpt = dsobj.config['dptid']
         else:
             return False
         if dpt == -1:
@@ -75,12 +76,17 @@ class dpt_type:
             self.errormsg()
             return raw
 
-    def errormsg(self,msg=''):
-        __import__('traceback').print_exc(file=__import__('sys').stdout)
+    def errormsg(self,msg=False):
+        self.WG.errormsg(msg)
 
     def debug(self,msg):
-        #print msg
-        pass
+        self.log(msg,'debug')
+        
+    def log(self,msg,severity='info',instance=False):
+        if not instance:
+            instance = "dpt-types"
+        self.WG.log(msg,severity,instance)
+
 
     def toBigInt(self,raw):
         c=0
@@ -212,6 +218,7 @@ class dpt_type:
     def decodeDPT16(self,raw):
         res = ""
         for char in raw:
+            ## stop on terminating \x00
             if char == 0:
                 break
             res += chr(char)

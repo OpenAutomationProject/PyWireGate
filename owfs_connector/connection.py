@@ -88,6 +88,7 @@ class Connection(object):
 
         self._server = server
         self._port   = port
+        self.checknum = re.compile(r"(^\d+$)|(^\d+\x2e\d+$)", re.MULTILINE)
 
 
     def __str__(self):
@@ -121,89 +122,118 @@ class Connection(object):
         """
         """
 
-        #print 'Connection.read("%s", %i, "%s")' % (path)
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self._server, self._port))
+        #print 'Connection.read("%s")' % (path)
+        
+        rtn = None
+        ## we don't want errors
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.connect((self._server, self._port))
+            except:
+                ##
+                return rtn
 
-        smsg = self.pack(OWMsg.read, len(path) + 1, 8192)
-        s.sendall(smsg)
-        s.sendall(path + '\x00')
+            smsg = self.pack(OWMsg.read, len(path) + 1, 8192)
+            s.sendall(smsg)
+            s.sendall(path + '\x00')
 
-        while 1:
-            data = s.recv(24)
+            while 1:
+                try:
+                    data = s.recv(24)
+                except:
+                    ##
+                    return rtn
 
-            if len(data) is not 24:
-                raise exShortRead
+                payload_len = -1
+                if len(data) is  24:
+                    ret, payload_len, data_len = self.unpack(data)
 
-            ret, payload_len, data_len = self.unpack(data)
+                if payload_len >= 0:
+                    data = s.recv(payload_len)
+                    return self.toNumber(data[:data_len])
+                    break
+                else:
+                    # ping response
+                    return None
 
-            if payload_len >= 0:
-                data = s.recv(payload_len)
-                rtn = self.toNumber(data[:data_len])
-                break
-            else:
-                # ping response
-                rtn = None
-                break
-
-        s.close()
-        return rtn
+        finally:
+            s.close()
+            
 
 
     def write(self, path, value):
         """
         """
+        ret = None
+        try:
+            #print 'Connection.write("%s", "%s")' % (path, str(value))
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.connect((self._server, self._port))
+            except:
+                return ret
 
-        #print 'Connection.write("%s", "%s")' % (path, str(value))
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self._server, self._port))
+            value = str(value)
+            smsg = self.pack(OWMsg.write, len(path) + 1 + len(value) + 1, len(value) + 1)
+            s.sendall(smsg)
+            s.sendall(path + '\x00' + value + '\x00')
 
-        value = str(value)
-        smsg = self.pack(OWMsg.write, len(path) + 1 + len(value) + 1, len(value) + 1)
-        s.sendall(smsg)
-        s.sendall(path + '\x00' + value + '\x00')
+            try:
+                data = s.recv(24)
+            except:
+                return ret
 
-        data = s.recv(24)
+            if len(data) is 24:
+                ret, payload_len, data_len = self.unpack(data)
+            return ret
 
-        if len(data) is not 24:
-            raise exShortRead
-
-        ret, payload_len, data_len = self.unpack(data)
-
-        s.close()
-        return ret
+            
+        finally:
+            s.close()
+        
 
 
     def dir(self, path):
         """
         """
-
-        #print 'Connection.dir("%s")' % (path)
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self._server, self._port))
-
-        smsg = self.pack(OWMsg.dir, len(path) + 1, 0)
-        s.sendall(smsg)
-        s.sendall(path + '\x00')
-
+        
         fields = []
-        while 1:
-            data = s.recv(24)
+        try:
+            #print 'Connection.dir("%s")' % (path)
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                s.connect((self._server, self._port))
+            except:
+                return fields
 
-            if len(data) is not 24:
-                raise exShortRead
+            smsg = self.pack(OWMsg.dir, len(path) + 1, 0)
+            s.sendall(smsg)
+            s.sendall(path + '\x00')
 
-            ret, payload_len, data_len = self.unpack(data)
+            while 1:
+                try:
+                    data = s.recv(24)
+                except:
+                    return fields
 
-            if payload_len > 0:
-                data = s.recv(payload_len)
-                fields.append(data[:data_len])
-            else:
-                # end of dir list or 'ping' response
-                break
+                if len(data) is not 24:
+                    return fields
 
-        s.close()
-        return fields
+                ret, payload_len, data_len = self.unpack(data)
+
+                if payload_len > 0:
+                    try:
+                        data = s.recv(payload_len)
+                    except:
+                        return fields
+                    fields.append(data[:data_len])
+                else:
+                    # end of dir list or 'ping' response
+                    return fields
+
+        finally:
+            s.close()
 
 
     def pack(self, function, payload_len, data_len):
@@ -241,15 +271,15 @@ class Connection(object):
         return ret_value, payload_len, data_len
 
 
-    def toNumber(self, str):
+    def toNumber(self, owstr):
         """
         """
+        owstr = owstr.strip()
+        numresult = self.checknum.findall(owstr)
+        if  numresult:
+            if numresult[0][0]:
+                return int(numresult[0][0])
+            elif numresult[0][1]:
+                return float(numresult[0][1])
 
-        stripped = str.strip()
-        if re.compile('^-?\d+$').match(stripped) :
-            return int(stripped)
-
-        if re.compile('^-?\d*\.\d*$').match(stripped) :	# Could crash if it matched '.' - let it.
-            return float(stripped)
-
-        return str
+        return owstr

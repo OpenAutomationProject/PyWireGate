@@ -172,7 +172,7 @@ class owfs_connector(Connector):
             ## loop through their interfaces
             for get in self.busmaster[busname]['sensors'][sensor]['interfaces']:
                 resolution = ""
-                id = "OW:"+sensor+"_"+get
+                id = "%s:%s_%s" % (self.instanceName,sensor,get)
 
                 ## get the Datastore Object and look for config
                 obj = self.WG.DATASTORE.get(id)
@@ -205,4 +205,3 @@ class owfs_connector(Connector):
                     threadname = "OWFS-Reader_%s" % busname
                     self.busmaster[busname]['readthread'] = threading.Thread(target=self._read,args=[busname],name=threadname)
                     self.busmaster[busname]['readthread'].start()
-                

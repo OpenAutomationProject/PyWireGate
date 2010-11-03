@@ -20,11 +20,12 @@ import DPT_Types
 import time
 
 class groupsocket:
-    def __init__(self, WireGateInstance):
+    def __init__(self, WireGateInstance, connectorInstance):
         self.WG = WireGateInstance
+        self.KNX = connectorInstance
         self.nicehex=lambda x: " ".join(map(lambda y:"%.2x" % y,x))
         self.tobinstr=lambda n,b=8: "".join([str((n >> y) & 1) for y in range(b-1, -1, -1)])
-        self.dpt = DPT_Types.dpt_type()
+        self.dpt = DPT_Types.dpt_type(WireGateInstance)
 
     def decode(self,buf,src,dst):
         ## Accept List Hex or Binary Data
@@ -48,7 +49,7 @@ class groupsocket:
         msg['srcaddr'] = self._decodePhysicalAddr(src)
         try:
             msg['dstaddr'] = self._decodeGrpAddr(dst)
-            id = "KNX:%s" % msg['dstaddr']
+            id = "%s:%s" % (self.KNX.instanceName, msg['dstaddr'])
             if (buf[0] & 0x3 or (buf[1] & 0xC0) == 0xC0):
                 ##FIXME: unknown APDU
                 self.debug("unknown APDU from "+msg['srcaddr']+" to "+msg['dstaddr']+ " raw:"+buf)
@@ -78,13 +79,9 @@ class groupsocket:
         return msg
 
 
-    def errormsg(self,msg=''):
-        f=open("/tmp/WGerror","a+")
-        __import__('traceback').print_exc(file=f)
-        f.write(time.asctime())
-        f.write("MSG:"+repr(msg))
-        f.close()
-
+    def errormsg(self,msg=False):
+        ## central error handling
+        self.WG.errorlog(msg)
         
     def _decodePhysicalAddr(self,raw):
         return "%d.%d.%d" % ((raw >> 12) & 0x0f, (raw >> 8) & 0x0f, (raw) & 0xff)
@@ -93,7 +90,7 @@ class groupsocket:
         return "%d/%d/%d" % ((raw >> 11) & 0x1f, (raw >> 8) & 0x07, (raw) & 0xff)
         
     def debug(self,msg):
-        print "DEBUG: GROUPSOCKET: "+ repr(msg) 
+        #print "DEBUG: GROUPSOCKET: "+ repr(msg) 
         pass
 
 

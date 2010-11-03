@@ -20,11 +20,12 @@ import DPT_Types
 import time
 
 class busmonitor:
-    def __init__(self, WireGateInstance):
+    def __init__(self, WireGateInstance,connectorInstance):
         self.WG = WireGateInstance
+        self.KNX = connectorInstance
         self.nicehex=lambda x: " ".join(map(lambda y:"%.2x" % y,x))
         self.tobinstr=lambda n,b=8: "".join([str((n >> y) & 1) for y in range(b-1, -1, -1)])
-        self.dpt = DPT_Types.dpt_type()
+        self.dpt = DPT_Types.dpt_type(WireGateInstance)
 
         ## FIXME: Not fully implemented
         self.apcicodes = {
@@ -99,8 +100,9 @@ class busmonitor:
             
             if msg['ctrl2']['DestAddrType'] == 0 and msg['apdu']['tpdu'] == "T_DATA_XXX_REQ":
                 msg['dstaddr'] = self._decodeGrpAddr(buf[3:5])
-                id = "KNX:%s" % msg['dstaddr']
                 
+                id = "%s:%s" % (self.KNX.instanceName, msg['dstaddr'])
+
                 ## search Datastoreobject
                 dsobj = self.WG.DATASTORE.get(id)
                 ## Decode the DPT Value
@@ -121,12 +123,8 @@ class busmonitor:
         return msg
 
 
-    def errormsg(self,msg=''):
-        f=open("/tmp/WGerror","a+")
-        __import__('traceback').print_exc(file=f)
-        f.write(time.asctime())
-        f.write("MSG:"+repr(msg))
-        f.close()
+    def errormsg(self,msg=False):
+        self.WG.errorlog(msg)
 
         
     def _decodeCtrlField1(self,raw):
