@@ -241,7 +241,7 @@ class Connection(object):
         """
 
         #print 'Connection.pack(%i, %i, %i)' % (function, payload_len, data_len)
-        return struct.pack('iiiiii',
+        return struct.pack('IIIIII',
                            socket.htonl(0),           #version
                            socket.htonl(payload_len), #payload length
                            socket.htonl(function),    #type of function call
