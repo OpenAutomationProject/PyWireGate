@@ -1,18 +1,13 @@
+import sys
 import time
 import threading
 
 try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
-try:
+    ## use included json in > Python 2.6 
     import json
 except ImportError:
     import simplejson as json
 
-import sys
-import xml.dom.minidom
 
 class datastore:
     """
@@ -32,8 +27,7 @@ class datastore:
         self.dataobjects = {}
         self.locked = threading.RLock()
         self.locked.acquire()
-        self.xmltag = lambda x,y,z='': len(z)>0 and "<%s %s>%s</%s>" % (x,z,y,x) or "<%s>%s</%s>" % (x,y,x)
-        ## Load XML Database
+        ## Load JSON Database
         self.load()
         
     
@@ -91,23 +85,10 @@ class datastore:
         return self.dataobjects[id]
 
 
-    ## FIXME: that should belong to the Connector
-    def readgaconf(self):
-        print "SHOULD NOT BE CALLED"
-        ga = self.WG.readConfig("/etc/wiregate/eibga.conf")
-        for key in ga.keys():
-            obj = self.get("KNX:%s" % key)
-            obj.config['dptid'] = ga[key]['dptsubid']
-            obj.name = ga[key]['name']
-            obj._send = self.WG.connectors['KNX'].send
-
-
     def load(self):
-        ## TODO:
         self.debug("load DATASTORE")
         try:
             db = open(self.WG.config['WireGate']['datastore'],"rb")
-            #loaddict = pickle.Unpickler(db).load()
             loaddict = json.load(db)
             db.close()
             for name, obj in loaddict.items():
@@ -120,17 +101,14 @@ class datastore:
         except IOError:
             ## no DB File
             pass
-            ## Fixme: should belong to conncetor
-            self.locked.release()
-            self.readgaconf()
         
         except:
+            self.WG.errorlog()
             ## error
             pass
 
 
     def save(self):
-        ## TODO:
         self.debug("save DATASTORE")
         self.locked.acquire()
         savedict = {}
@@ -145,31 +123,11 @@ class datastore:
                 'connected' : obj.connected
             }
         dbfile = open(self.WG.config['WireGate']['datastore'],"wb")
-        #db = pickle.Pickler(dbfile,-1)
-        #db.dump(savedict)
         json.dump(savedict,dbfile,sort_keys=True,indent=3)
         dbfile.close()
         
 
-    def savetoXML(self):
-        objitemxml = ""
-        for name,obj in  self.dataobjects.items():
-             configxml = ""
-             for cname,cval in obj.config.items():
-                  configxml += self.xmltag(cname,cval)
-             objitemxml += self.xmltag(
-                    "DSitem",
-                    self.xmltag("id",name) + 
-                    self.xmltag("value",obj.getValue(),'type=%r' % type(obj.value).__name__) +
-                    self.xmltag("config",configxml)
-                    )
-        self.locked.release()
-        xmlout = xml.dom.minidom.parseString(self.xmltag("Datastore",objitemxml))
-        #xmlout = xmlout.toprettyxml(indent="  ")
-        xmlout = xmlout.toxml()
-        ## write binary to preserve UTF8
-        open(self.WG.config['WireGate']['datastore'],"wb").write(xmlout)
-    
+   
     def debug(self,msg):
         ####################################################
         ## Function: debug
@@ -225,12 +183,10 @@ class dataObject:
 
     def _setValue(self,refered_self):
         ## self override 
-        print "Ovveride now"
+        ## override with connector send function
         if self.namespace:
             self._setValue = self.WG.connectors[self.namespace].setValue
             self.WG.connectors[self.namespace].setValue(refered_self)
-        ## override with connector send function
-        pass
 
     def setValue(self,val,send=False):
         try:
@@ -259,40 +215,3 @@ class dataObject:
               self.read_mutex.release()
 
         
-
-#import json
-
-def JSON2DataStore(text):
-    obj = {}
-    return obj
-
-
-def DataStore2JSON(obj):
-    text = ""
-    return text
-
-class testtwo:
-    def __init__(self):
-        self.i=10
-    def _send(self,val):
-        """Hallo"""
-        print str(dir(self)) +str(val+self.i)
-        
-class testthree:
-    def __init__(self):
-        self.u=1
-    def send(self,val):
-        """its me"""
-        print str(dir(self)) +str(self.u)
-    
-        
-
-if __name__ == "__main__":
-    two = testtwo()
-    two._send(20)
-    three = testthree()
-    two._send = three.send
-    two._send(20)
-    print two._send
-    print dir(two)
-    
