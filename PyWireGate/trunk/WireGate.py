@@ -22,11 +22,9 @@ import time
 import signal
 import traceback
 import daemon
-import logging
-import logging.handlers
+import log as logging
 
 import ConfigParser
-
 
 import datastore
 
@@ -64,11 +62,10 @@ class WireGate(daemon.Daemon):
             'loglevel': 'info'
         }
         
+        self.checkconfig("WireGate",defaultconfig)
         ## Remove this later
         if "plugins" in self.config['WireGate']:
             self.log("old Config",'critical')
-
-        self.checkconfig("WireGate",defaultconfig)
         
 
 
@@ -227,7 +224,7 @@ class WireGate(daemon.Daemon):
             maxlevel = self.config['WireGate']['loglevel']
         if not filename:
             filename = self.config['WireGate']['logfile']
-        LEVELS = {'debug': logging.DEBUG,'info': logging.INFO,'warning': logging.WARNING,'error': logging.ERROR,'critical': logging.CRITICAL}
+        LEVELS = {'debug': logging.DEBUG,'info': logging.INFO,'notice': logging.NOTICE,'warning': logging.WARNING,'error': logging.ERROR,'critical': logging.CRITICAL}
         level = LEVELS.get(maxlevel, logging.NOTSET)
         # create logger
 
@@ -248,7 +245,7 @@ class WireGate(daemon.Daemon):
         # create console handler and set level to debug
         if self.REDIRECTIO:
             #console = logging.StreamHandler()
-            console = isoStreamHandler()
+            console = logging.isoStreamHandler()
             console.setFormatter(formatter)            
             logger.addHandler(console)
         return logger
@@ -265,7 +262,7 @@ class WireGate(daemon.Daemon):
         elif severity=="info":
             logger.info(msg)
         elif severity=="notice":
-            logger.info(msg)
+            logger.notice(msg)
         elif severity=="warning":
             logger.warning(msg)
         elif severity=="warn":
@@ -285,13 +282,6 @@ class WireGate(daemon.Daemon):
     def decouple(self):
         os.chdir("/")
         os.umask(0)
-
-
-class isoStreamHandler(logging.StreamHandler):
-    def emit(self,record):
-        #record.message = record.message.decode('utf-8').encode('iso-8859-15')
-        record.message = record.message.encode(sys.stderr.encoding)
-        logging.StreamHandler.emit(self,record)
 
 
 if __name__ == "__main__":
@@ -337,7 +327,6 @@ if __name__ == "__main__":
         pass
         print "Exiting"
         sys.exit(0)
-
 
 
 
