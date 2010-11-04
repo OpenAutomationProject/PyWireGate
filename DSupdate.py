@@ -1,19 +1,15 @@
 import getopt
 import ConfigParser
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import sys
+import datastore
 
 try:
+    ## try Python 2.6 json lib
     import json
 except ImportError:
     import simplejson as json
 
 
-import datastore
-
-import sys
 
 class dbloader:
     def __init__(self,config,fname):
@@ -63,6 +59,7 @@ class dbloader:
         ow = self.readConfig(fname)
         for key in ow.keys():
             id = "%s:%s_temperature" % (self.config['namespace'],key)
+            ## Fixme: Humidity ... not included
             print "add %s " % id
             self.dataobjects[id] = datastore.dataObject(False,id,unicode(ow[key]['name'],errors='ignore'))
             if 'resolution' in ow[key]:
@@ -72,18 +69,16 @@ class dbloader:
                     knxid = "KNX:%s" % ow[key]['eib_ga_temp']
                     print "Try to attach to  %s " % knxid
                     self.dataobjects[id].connected.append(knxid)
-                    print "attaached"
+                    print "attached"
 
 
     def debug(self,msg=''):
         print msg
 
     def load(self):
-        ## TODO:
         self.debug("load DATASTORE")
         try:
             db = open(self.config['datastore'],"rb")
-            #loaddict = pickle.Unpickler(db).load()
             loaddict = json.load(db)
             db.close()
             for name, obj in loaddict.items():
@@ -95,13 +90,10 @@ class dbloader:
         except:
             ## no DB File
             print "DB not found"
-            pass
-            ## Fixme: should belong to conncetor
         
 
 
     def save(self):
-        ## TODO:
         self.debug("save DATASTORE")
         savedict = {}
         ## FIXME: user create a __reduce__ method for the Datastoreitem object
@@ -115,8 +107,6 @@ class dbloader:
                 'connected' : obj.connected
             }
         dbfile = open(self.config['datastore'],"wb")
-        #db = pickle.Pickler(dbfile,-1)
-        #db.dump(savedict)
         json.dump(savedict,dbfile,sort_keys=True,indent=3)
         dbfile.close()
         for i in savedict.keys():
