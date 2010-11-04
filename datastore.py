@@ -208,6 +208,9 @@ class dataObject:
             self.write_mutex.acquire()
             ## save the modified time
             self.lastupdate = time.time()
+            if type(val) == str:
+                self.WG.log("Non Unicode Value received for %s" % self.id,'warning')
+                val = unicode(val,encoding='iso-8859-15',errors='ignore')
             self.value = val
             if send:
                 self._setValue(self)
