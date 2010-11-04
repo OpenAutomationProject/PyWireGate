@@ -291,7 +291,7 @@ class dpt_type:
         sec = raw[2] & 0x3f
         ## Fixme: eigentlich sollte Zeit als Unix Timestamp gespeichert werden, was macht man mit dem Wochentag
         ## machs erstmal so wie makki
-        return "%s %d:%d:%d" % (weekdays[weekday], hour,min,sec)
+        return u"%s %d:%d:%d" % (weekdays[weekday], hour,min,sec)
 
     def encodeDPT10(self,val):
         ## checktype default unix timestamp
@@ -345,7 +345,7 @@ class dpt_type:
             year += 2000
         else:
             year += 1900
-        return "%02d.%02d.%04d" % (day,mon,year)
+        return u"%02d.%02d.%04d" % (day,mon,year)
 
     def encodeDPT11(self,val):
         if type(val) in [float, int]:
