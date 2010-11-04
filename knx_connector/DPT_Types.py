@@ -124,7 +124,8 @@ class dpt_type:
             return msg
 
     def errormsg(self,msg=False):
-        self.WG.errorlog(msg)
+        if self.WG:
+            self.WG.errorlog(msg)
 
     def debug(self,msg):
         self.log(msg,'debug')
@@ -132,7 +133,8 @@ class dpt_type:
     def log(self,msg,severity='info',instance=False):
         if not instance:
             instance = "dpt-types"
-        self.WG.log(msg,severity,instance)
+        if self.WG:
+            self.WG.log(msg,severity,instance)
 
     def toByteArray(self,val,length):
         ## Set ByteArray
@@ -160,7 +162,7 @@ class dpt_type:
         return int(raw[0]) & 0x1
 
     def encodeDPT1(self,val):
-        pass
+        return int(val) & 0x1
 
     def decodeDPT2(self,raw):
         ## 2 Bit Control
@@ -171,7 +173,7 @@ class dpt_type:
         return int(raw[0]) & 0x3
 
     def encodeDPT2(self,val):
-        pass
+        return int(val) & 0x3
 
     def decodeDPT3(self,raw):
         ## 4 bit Dim (DPT 3.007)
@@ -183,29 +185,35 @@ class dpt_type:
         return int(raw[0]) & 0xf
 
     def encodeDPT3(self,val):
-        pass
+        return int(val) & 0xf
         
     def decodeDPT4(self,raw):
-        ## 1 Byte Character
-        return chr(raw[0] & 0xff)
+        ## 1 Byte Character 
+        ## ISO 2 Unicode
+        return chr(raw[0] & 0xff).decode('iso-8859-15')
     
     def encodeDPT4(self,val):
-        pass
+        if type(val) == unicode:
+            ## convert to str
+            val = val.encode('iso-8859-15')
+        if type(val) <> str:
+            val = "%r" % val
+        return ord(val[0]) & 0xff
     
     def decodeDPT5(self,raw):
         ## 1 Byte unsigned
-        return (int(raw[0] & 0xff))
+        return int(raw[0]) & 0xff
 
     def encodeDPT5(self,val):
-        pass
+        return int(val) & 0xff
 
     def decodeDPT501(self,raw):
         ## 1 Byte unsigned percent
         self.debug("DPT5.001 Scaling: value: %d" % raw[0])
-        return int(raw[0] & 0xff) * 100 / 255
+        return (int(raw[0]) & 0xff) * 100 / 255
 
     def encodeDPT501(self,val):
-        pass
+        return (int(val) * 255 / 100 ) & 0xff
     
     def decodeDPT6(self,raw):
         ## 1 Byte signed
@@ -213,14 +221,17 @@ class dpt_type:
         return  (val > 127 and val - 256 or val)
 
     def encodeDPT6(self,val):
-        pass
+        if val > 127:
+            ## Max
+            val = 127
+        return int(val) & 0xff
         
     def decodeDPT7(self,raw):
         ## 2 byte unsigned
         return int(self.toBigInt(raw) & 0xffff)
 
     def encodeDPT7(self,val):
-        pass
+        return self.toByteArray(val & 0xffff,2)
         
     def decodeDPT8(self,raw):
         ## 2 Byte signed
@@ -228,7 +239,9 @@ class dpt_type:
         return  (val > 32767 and val - 32768 or val)
 
     def encodeDPT8(self,val):
-        pass
+        if val > 32767:
+            val = 32767
+        return self.toByteArray(val & 0xffff,2)
 
     def decodeDPT9(self,raw):
         ## 2 Byte Float
@@ -242,7 +255,7 @@ class dpt_type:
         exp = (val & 0x7800) >> 11
         mant = val & 0x07ff
         if sign <> 0:
-            mant = -(~(mant - 1) & 0x7ff) 
+            mant = -(~(mant - 1) & 0x07ff) 
         self.debug("DPT9: value: %d sign: %d exp: %d mant: %f" % (val, sign,exp,mant))
         return (1 << exp) * 0.01 * mant
 
@@ -252,10 +265,11 @@ class dpt_type:
         if val < 0:
             sign = 0x8000
         mant = val * 100
-        while mant > 2047:
+        while mant > 0x07ff:
             mant = mant >> 1
             exp +=1
         data = sign | (exp << 11) | (int(mant) & 0x07ff)
+        self.debug("DPT9: value: %d sign: %d exp: %d mant: %r" % (val, sign,exp,mant))
         ## change to 2Byte bytearray 
         return self.toByteArray(data,2)
     
@@ -362,21 +376,22 @@ class dpt_type:
             year -= 1900
         else:
             year -= 2000
-            
         return [ day & 0x1f, mon & 0xf, year & 0x7f ]
 
     def decodeDPT12(self,raw):
         return int(self.toBigInt(raw)) % 0xffffffff
 
     def encodeDPT12(self,val):
-        pass
+        return self.toByteArray(val & 0xffffffff,4)
 
     def decodeDPT13(self,raw):
         val = int(self.toBigInt(raw)) % 0xffffffff
         return (val > 2147483647 and val - 2147483648 or val)
 
     def encodeDPT13(self,val):
-        pass
+        if val > 2147483647:
+            val = 2147483647
+        return self.toByteArray(val & 0xffffffff,4)
 
     def decodeDPT14(self,raw):
         ## 4 Byte Float
@@ -394,7 +409,18 @@ class dpt_type:
         return (1 << exp) * 0.01 * mant
 
     def encodeDPT14(self,val):
-        pass
+        sign = 0
+        exp = 0
+        if val < 0:
+            sign = 0x80000000
+        mant = val * 100
+        while mant > 0x7fffff:
+            mant = mant >> 1
+            exp +=1
+        data = sign | (exp << 23) | (int(mant) & 0x07ff)
+        self.debug("DPT14: value: %d sign: %d exp: %d mant: %r" % (val, sign,exp,mant))
+        ## change to 4Byte bytearray 
+        return self.toByteArray(data,4)
 
     def decodeDPT16(self,raw):
         res = ""
@@ -405,10 +431,21 @@ class dpt_type:
             res += chr(char)
         
         ## Decode ISO 2 Unicode
-        return res.decode("iso-8859-15")
+        return res.decode('iso-8859-15')
 
     def encodeDPT16(self,val):
-        pass
+        if type(val) == unicode:
+            val = val.encode('iso-8859-15')
+        ## max 14
+        val = val[:14]
+        data = []
+        for cnt in range(14):
+            if len(val) > cnt:
+                char = ord(val[cnt])
+            else:
+                char = 0
+            data.append(char)
+        return data
 
     def validTypes(self,datalen):
         ##TODO:
@@ -441,8 +478,8 @@ class dpt_type:
 
 
 if __name__ == "__main__":
-    dpttypes = dpt_type()
+    dpttypes = dpt_type(False)
     print dpttypes.decode([24,88],dptid=9)
     print dpttypes.decode([1],dptid=1)
     print dpttypes.decode([35,76,58],dptid=16)
-    
+    print dpttypes.encode("Das ist",dptid=16)
