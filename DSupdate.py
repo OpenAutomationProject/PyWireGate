@@ -1,6 +1,7 @@
 import getopt
 import ConfigParser
 import sys
+import codecs
 import datastore
 
 try:
@@ -24,7 +25,7 @@ class dbloader:
         self.save()
 
     def readConfig(self,configfile):
-        cfile = open(configfile,"r")
+        cfile = codecs.open(configfile,"r")
         ## fix for missingsectionheaders
         while True:
             pos = cfile.tell()
@@ -52,7 +53,7 @@ class dbloader:
         ga = self.readConfig(fname)
         for key in ga.keys():
             id = "%s:%s" % (self.config['namespace'],key)
-            self.dataobjects[id] = datastore.dataObject(False,id,unicode(ga[key]['name'],errors='ignore'))
+            self.dataobjects[id] = datastore.dataObject(False,id,ga[key]['name'].decode('iso-8859-15'))
             self.dataobjects[id].config['dptid'] = ga[key]['dptsubid']
 
     def OWFSloader(self,fname):
@@ -61,7 +62,7 @@ class dbloader:
             id = "%s:%s_temperature" % (self.config['namespace'],key)
             ## Fixme: Humidity ... not included
             print "add %s " % id
-            self.dataobjects[id] = datastore.dataObject(False,id,unicode(ow[key]['name'],errors='ignore'))
+            self.dataobjects[id] = datastore.dataObject(False,id,ow[key]['name'].decode('iso-8859-15'))
             if 'resolution' in ow[key]:
                 self.dataobjects[id].config['resolution'] = ow[key]['resolution']
             if 'eib_ga_temp' in ow[key]:
@@ -78,7 +79,7 @@ class dbloader:
     def load(self):
         self.debug("load DATASTORE")
         try:
-            db = open(self.config['datastore'],"rb")
+            db = codecs.open(self.config['datastore'],"rb",encoding='utf-8')
             loaddict = json.load(db)
             db.close()
             for name, obj in loaddict.items():
@@ -106,7 +107,7 @@ class dbloader:
                 'config' : obj.config,
                 'connected' : obj.connected
             }
-        dbfile = open(self.config['datastore'],"wb")
+        dbfile = codecs.open(self.config['datastore'],"wb",encoding='utf-8')
         json.dump(savedict,dbfile,sort_keys=True,indent=3)
         dbfile.close()
         for i in savedict.keys():

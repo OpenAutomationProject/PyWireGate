@@ -2,6 +2,8 @@ import sys
 import time
 import threading
 
+import codecs
+
 try:
     ## use included json in > Python 2.6 
     import json
@@ -89,7 +91,7 @@ class datastore:
     def load(self):
         self.debug("load DATASTORE")
         try:
-            db = open(self.WG.config['WireGate']['datastore'],"rb")
+            db = codecs.open(self.WG.config['WireGate']['datastore'],"rb",encoding='utf-8')
             loaddict = json.load(db)
             db.close()
             for name, obj in loaddict.items():
@@ -127,8 +129,10 @@ class datastore:
                 'config' : obj.config,
                 'connected' : obj.connected
             }
-        dbfile = open(self.WG.config['WireGate']['datastore'],"wb")
-        json.dump(savedict,dbfile,sort_keys=True,indent=3)
+        dbfile = codecs.open(self.WG.config['WireGate']['datastore'],"wb",encoding='utf-8')
+        utfdb = json.dumps(savedict,dbfile,ensure_ascii=False,sort_keys=True,indent=3)
+        dbfile.write(utfdb)
+        #json.dump(savedict,dbfile,sort_keys=True,indent=3)
         dbfile.close()
         
 
@@ -168,12 +172,15 @@ class dataObject:
 
         if not name:
             ## Initial Name 
-            self.name = "%s:unbekannt-%s" % (namespace, time.strftime("%Y-%m-%d_%H:%M:%S"))
+            self.name = u"%s:unbekannt-%s" % (namespace, time.strftime("%Y-%m-%d_%H:%M:%S"))
         else:
             self.name = name
         
+        if type(self.name) <> unicode:
+            ## guess that non unicode is iso8859
+            self.name = name.decode("iso-8859-15")
         ## some defaults
-        self.value = ""
+        self.value = u""
         self.lastupdate = 0
         self.id = id
         
