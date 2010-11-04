@@ -269,6 +269,8 @@ class dpt_type:
         ## M Minutes
         ## S Seconds
         weekday = (raw[0] & 0xe0) >> 5
+        
+        ## Fixme: I18N
         weekdays = ["","Mo","Di","Mi","Do","Fr","Sa","So"]
         hour = raw[0] & 0x1f
         min = raw[1] & 0x3f
@@ -278,8 +280,43 @@ class dpt_type:
         return "%s %d:%d:%d" % (weekdays[weekday], hour,min,sec)
 
     def encodeDPT10(self,val):
-        pass
-    
+        ## checktype default unix timestamp
+        ## except standard timestring 20:15 or 20:15:34 or Mo 20:14:55
+        weekday = 0
+        hour = 0
+        min = 0 
+        sec = 0
+        if type(val) == str:
+            ## check for weekday
+            if val[0].isalpha():
+                ## extract Weekday
+                day,val = val.split(" ",1)
+                ## Fixme: I18N
+                day = day.lower()
+                weekdays = ["","mo","di","mi","do","fr","sa","so"]
+                if weekday in weekdays:
+                    weekday = weekdays.index(day)
+
+            timeval = val.split(":")
+            if len(timeval) == 2:
+                hour = int(timeval[0])
+                min = int(timeval[1])
+            if len(timeval) == 3:
+                sec = int(timeval[2])
+        elif type(val) in [float, int]:
+            now = time.localtime(val)
+            weekday = now[6]
+            hour = now[3]
+            min = now[4]
+            sec = now[5]
+
+        else:
+            ## can't convert
+            return False
+        
+        weekday = weekday << 5
+        return [weekday | hour , min, sec]
+                
     def decodeDPT11(self,raw):
         ## 3 byte Date
         ## RRRDDDDD RRRRMMMM RYYYYYYY
@@ -297,7 +334,36 @@ class dpt_type:
         return "%02d.%02d.%04d" % (day,mon,year)
 
     def encodeDPT11(self,val):
-        pass
+        if type(val) in [float, int]:
+            tval = val
+        else:
+            tval =0
+        ## make time struct accesible
+        utime = [v for v in time.localtime(tval)]
+        if type(val) == str:
+            datestr = val.split(".")
+            if len(datestr) == 2:
+                # day
+                utime[2] = val[0]
+                # month
+                utime[1] = val[1]
+                ##year
+                if val[2]<90:
+                    utime[2] = 2000 + val[2]
+                elif val[2]<100:
+                    utime = 1900 + val[2]
+                else:
+                    utime = val[2]
+                
+        day = utime[2]
+        mon = utime[1] 
+        year = utime[2]
+        if year < 2000:
+            year -= 1900
+        else:
+            year -= 2000
+            
+        return [ day & 0x1f, mon & 0xf, year & 0x7f ]
 
     def decodeDPT12(self,raw):
         return int(self.toBigInt(raw)) % 0xffffffff
@@ -337,7 +403,9 @@ class dpt_type:
             if char == 0:
                 break
             res += chr(char)
-        return res
+        
+        ## Decode ISO 2 Unicode
+        return res.decode("iso-8859-15")
 
     def encodeDPT16(self,val):
         pass
