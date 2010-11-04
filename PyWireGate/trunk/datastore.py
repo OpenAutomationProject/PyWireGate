@@ -24,6 +24,7 @@ class datastore:
         ####################################################
         self.WG = WireGateInstance
         self.log("DATASTORE starting up")
+        self.DBLOADED = False
         self.dataobjects = {}
         self.locked = threading.RLock()
         self.locked.acquire()
@@ -98,6 +99,7 @@ class datastore:
                 self.dataobjects[name].connected = obj['connected']
             self.debug("%d entries loaded in DATASTORE" % len(self.dataobjects))
             self.locked.release()
+            self.DBLOADED = True
         except IOError:
             ## no DB File
             pass
@@ -110,6 +112,9 @@ class datastore:
 
     def save(self):
         self.debug("save DATASTORE")
+        if not self.DBLOADED:
+            self.debug("No valid config, not saving")
+            return False
         self.locked.acquire()
         savedict = {}
         ## FIXME: user create a __reduce__ method for the Datastoreitem object
