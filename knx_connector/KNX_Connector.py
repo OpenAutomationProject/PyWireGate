@@ -18,10 +18,16 @@
 
 
 from connector import Connector
+import re
 import EIBConnection
 import select
 import BusMonitor
 import GroupSocket
+import DPT_Types
+
+KNXREADFLAG = 0x00
+KNXRESPONSEFLAG = 0x40
+KNXWRITEFLAG = 0x80
 
 class knx_connector(Connector):
     CONNECTOR_NAME = 'KNX Connector'
@@ -37,7 +43,10 @@ class knx_connector(Connector):
         self.KNXDst = EIBConnection.EIBAddr()
         self.busmon = BusMonitor.busmonitor(WireGateInstance,self)
         self.groupsocket = GroupSocket.groupsocket(WireGateInstance,self)
+        self.dpt = DPT_Types.dpt_type(WireGateInstance)
         
+        self.GrpAddrRegex = re.compile(r"(?:|(\d+)\x2F)(\d+)\x2F(\d+)$",re.MULTILINE)
+
         ## Deafaultconfig
         defaultconfig = {
             'url':'ip:127.0.0.1',
@@ -115,6 +124,33 @@ class knx_connector(Connector):
                             self.busmon.decode(self.KNXBuffer.buffer)
                 
 
+    def str2grpaddr(self,addrstr):
+        grpaddr = self.GrpAddrRegex.findall(addrstr)
+        if not grpaddr:
+            return False
+        ## regex result 1
+        grpaddr = grpaddr[0]
+        addr = 0
+        ## if GROUP3 Addr
+        if grpaddr[0]:
+            addr = int(grpaddr[0]) << 11
+        addr = addr | (int(grpaddr[1]) << 8)
+        addr = addr | int(grpaddr[2])
+        return addr
+        
 
-    def send(self,dsobj):
-        print "SEND to %s" % dsobj.name
+    def send(self,msg,dstaddr):
+        try:
+            addr = self.str2grpaddr(dstaddr)
+            if addr:
+                msg = [0,KNXWRITEFLAG] +msg
+                self.KNX.EIBSendGroup(addr,msg)
+        except:
+            self.errormsg("Failed send %r to %r" % (msg,dstaddr))
+
+    def setValue(self,dsobj,msg=False):
+        if not msg:
+            msg = dsobj.getValue()
+        self.debug("SEND %r to %s (%s)" % (msg,dsobj.name,dsobj.id))
+        self.send(self.dpt.encode(msg,dsobj=dsobj),dsobj.id)
+        

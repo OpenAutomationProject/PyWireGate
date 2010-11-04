@@ -20,6 +20,8 @@
 ### Da die EIBConnection Lib den string nicht hexadezimal zurueckgibt,
 ### sondern als LIST mit den dezimalen Werten ist das decode hier ein bischen angepasst
 
+import struct
+
 class dpt_type:
     def __init__(self,WireGateInstance):
         self.WG = WireGateInstance
@@ -43,6 +45,26 @@ class dpt_type:
             14:self.decodeDPT14,     # EIS 9         / 4 byte float 
             16:self.decodeDPT16      # EIS 15        / 14 byte Text
         }
+        self.ENCODER = {
+            1:self.encodeDPT1,       # EIS 1/7       / 1 bit  0=Aus/1=Ein
+            2:self.encodeDPT2,       # EIS 8         / 2 bit  0,1=Frei/2=Prio_Aus/3=Prio_Ein
+            3:self.encodeDPT3,       # EIS 2         / 4 bit
+            4:self.encodeDPT4,       # EIS 13        / 1 byte 1 Zeichen
+            5:self.encodeDPT5,       # EIS 6/14.001  / 1 byte 0...255 5.001 
+            5.001:self.encodeDPT501, # PDT_SCALING
+            5.005:self.encodeDPT5,   # DPT_DecimalFactor
+            5.010:self.encodeDPT5,   # DPT_Value_1_Ucount
+            6:self.encodeDPT6,       # EIS 14.000    / 1 byte -128 ... 127
+            7:self.encodeDPT7,       # EIS 10.000    / 2 byte 0....65535
+            8:self.encodeDPT8,       # EIS 10.001    / 2 byte -32768 .... 32767
+            9:self.encodeDPT9,       # EIS 5         / 2 byte Float
+            10:self.encodeDPT10,     # EIS 3         / 3 byte WoTag/Stunde/Minute/Sekunde
+            11:self.encodeDPT11,     # EIS 4         / 3 byte Tag/Monat/Jahr
+            12:self.encodeDPT12,     # EIS 11.000    / 4 byte unsigned [0...4.294.967.295]
+            13:self.encodeDPT13,     # EIS 11.001    / 4 byte signed -2.147.483.648 ... 2.147.483.647]
+            14:self.encodeDPT14,     # EIS 9         / 4 byte float 
+            16:self.encodeDPT16      # EIS 15        / 14 byte Text
+        }
         
         
     def decode(self,raw,dptid=0,dsobj=False):
@@ -52,8 +74,8 @@ class dpt_type:
         elif dsobj:
             if "dptid" in dsobj.config:
                 dpt = dsobj.config['dptid']
-        else:
-            return False
+        #else:
+        #    return False
         if dpt == -1:
             dpt = self.guessType(raw)
             if dsobj:
@@ -62,6 +84,18 @@ class dpt_type:
         if dpt == 0:
             return raw
         return self._decode(raw,dpt)
+
+    def encode(self,msg,dptid=0,dsobj=False):
+        dpt=-1
+        if dptid > 0:
+            dpt = dptid
+        elif dsobj:
+            if "dptid" in dsobj.config:
+                dpt = dsobj.config['dptid']
+        else:
+            return False
+        return self._encode(msg,dpt)
+    
 
     def _decode(self,raw,dpt):
         try:
@@ -75,9 +109,22 @@ class dpt_type:
         except:
             self.errormsg()
             return raw
+    
+    def _encode(self,msg,dpt):
+        try:
+            try:
+                return self.ENCODER[dpt](msg)
+            except KeyError:
+                try:
+                    return self.ENCODER[int(dpt)](msg)
+                except KeyError:
+                    return msg
+        except:
+            self.errormsg()
+            return msg
 
     def errormsg(self,msg=False):
-        self.WG.errormsg(msg)
+        self.WG.errorlog(msg)
 
     def debug(self,msg):
         self.log(msg,'debug')
@@ -87,6 +134,18 @@ class dpt_type:
             instance = "dpt-types"
         self.WG.log(msg,severity,instance)
 
+    def toByteArray(self,val,length):
+        ## Set ByteArray
+        ret = [0 for b in range(length)]
+        for val in struct.pack("L",val):
+            ## Fill up from end
+            length -= 1
+            ## if struct larger then len return
+            if length < 0:
+                return ret
+            ## write from end to start
+            ret[length] = ord(val)
+        return ret
 
     def toBigInt(self,raw):
         c=0
@@ -99,7 +158,10 @@ class dpt_type:
 
     def decodeDPT1(self,raw):
         return int(raw[0]) & 0x1
-    
+
+    def encodeDPT1(self,val):
+        pass
+
     def decodeDPT2(self,raw):
         ## 2 Bit Control
         ## RRRRRRCS
@@ -107,6 +169,9 @@ class dpt_type:
         ## C Control (0=Not enforced/1=enforced)
         ## S Switch 0=off/1=on
         return int(raw[0]) & 0x3
+
+    def encodeDPT2(self,val):
+        pass
 
     def decodeDPT3(self,raw):
         ## 4 bit Dim (DPT 3.007)
@@ -116,33 +181,54 @@ class dpt_type:
         ## S Step (1-7) 0=Break
         ## FIXME: dont know what a Datastore should accept here
         return int(raw[0]) & 0xf
+
+    def encodeDPT3(self,val):
+        pass
         
     def decodeDPT4(self,raw):
         ## 1 Byte Character
         return chr(raw[0] & 0xff)
     
+    def encodeDPT4(self,val):
+        pass
+    
     def decodeDPT5(self,raw):
         ## 1 Byte unsigned
         return (int(raw[0] & 0xff))
+
+    def encodeDPT5(self,val):
+        pass
 
     def decodeDPT501(self,raw):
         ## 1 Byte unsigned percent
         self.debug("DPT5.001 Scaling: value: %d" % raw[0])
         return int(raw[0] & 0xff) * 100 / 255
+
+    def encodeDPT501(self,val):
+        pass
     
     def decodeDPT6(self,raw):
         ## 1 Byte signed
         val = int(raw[0] & 0xff)
         return  (val > 127 and val - 256 or val)
+
+    def encodeDPT6(self,val):
+        pass
         
     def decodeDPT7(self,raw):
         ## 2 byte unsigned
         return int(self.toBigInt(raw) & 0xffff)
+
+    def encodeDPT7(self,val):
+        pass
         
     def decodeDPT8(self,raw):
         ## 2 Byte signed
         val = int(self.toBigInt(raw) & 0xffff)
         return  (val > 32767 and val - 32768 or val)
+
+    def encodeDPT8(self,val):
+        pass
 
     def decodeDPT9(self,raw):
         ## 2 Byte Float
@@ -160,6 +246,19 @@ class dpt_type:
         self.debug("DPT9: value: %d sign: %d exp: %d mant: %f" % (val, sign,exp,mant))
         return (1 << exp) * 0.01 * mant
 
+    def encodeDPT9(self,val):
+        sign = 0
+        exp = 0
+        if val < 0:
+            sign = 0x8000
+        mant = val * 100
+        while mant > 2047:
+            mant = mant >> 1
+            exp +=1
+        data = sign | (exp << 11) | (int(mant) & 0x07ff)
+        ## change to 2Byte bytearray 
+        return self.toByteArray(data,2)
+    
 
     def decodeDPT10(self,raw):
         ## 3 Byte Time
@@ -177,6 +276,9 @@ class dpt_type:
         ## Fixme: eigentlich sollte Zeit als Unix Timestamp gespeichert werden, was macht man mit dem Wochentag
         ## machs erstmal so wie makki
         return "%s %d:%d:%d" % (weekdays[weekday], hour,min,sec)
+
+    def encodeDPT10(self,val):
+        pass
     
     def decodeDPT11(self,raw):
         ## 3 byte Date
@@ -194,11 +296,21 @@ class dpt_type:
             year += 1900
         return "%02d.%02d.%04d" % (day,mon,year)
 
+    def encodeDPT11(self,val):
+        pass
+
     def decodeDPT12(self,raw):
         return int(self.toBigInt(raw)) % 0xffffffff
+
+    def encodeDPT12(self,val):
+        pass
+
     def decodeDPT13(self,raw):
         val = int(self.toBigInt(raw)) % 0xffffffff
         return (val > 2147483647 and val - 2147483648 or val)
+
+    def encodeDPT13(self,val):
+        pass
 
     def decodeDPT14(self,raw):
         ## 4 Byte Float
@@ -215,6 +327,9 @@ class dpt_type:
         self.debug("DPT14: value: %d sign: %d exp: %d mant: %f" % (val, sign,exp,mant))
         return (1 << exp) * 0.01 * mant
 
+    def encodeDPT14(self,val):
+        pass
+
     def decodeDPT16(self,raw):
         res = ""
         for char in raw:
@@ -223,6 +338,9 @@ class dpt_type:
                 break
             res += chr(char)
         return res
+
+    def encodeDPT16(self,val):
+        pass
 
     def validTypes(self,datalen):
         ##TODO:
