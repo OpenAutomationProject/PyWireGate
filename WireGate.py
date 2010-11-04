@@ -236,17 +236,19 @@ class WireGate(daemon.Daemon):
         logger.setLevel(level)
         if filename:
             ## python handle logrotating
-            handler = logging.handlers.TimedRotatingFileHandler(filename,'midnight',backupCount=7)
+            handler = logging.handlers.TimedRotatingFileHandler(filename,'MIDNIGHT',encoding='utf-8',backupCount=7)
             
             ## Handler if logrotate handles Logfiles
             #handler = logging.handlers.WatchedFileHandle(filename)
             handler.setFormatter(formatter)
+            handler.setLevel(level)
             logger.addHandler(handler)
 
 
         # create console handler and set level to debug
         if self.REDIRECTIO:
-            console = logging.StreamHandler()
+            #console = logging.StreamHandler()
+            console = isoStreamHandler()
             console.setFormatter(formatter)            
             logger.addHandler(console)
         return logger
@@ -284,6 +286,12 @@ class WireGate(daemon.Daemon):
         os.chdir("/")
         os.umask(0)
 
+
+class isoStreamHandler(logging.StreamHandler):
+    def emit(self,record):
+        #record.message = record.message.decode('utf-8').encode('iso-8859-15')
+        record.message = record.message.encode(sys.stderr.encoding)
+        logging.StreamHandler.emit(self,record)
 
 
 if __name__ == "__main__":
