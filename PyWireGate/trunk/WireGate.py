@@ -22,7 +22,8 @@ import time
 import signal
 import traceback
 import daemon
-import log as logging
+import log 
+
 
 import ConfigParser
 
@@ -142,20 +143,23 @@ class WireGate(daemon.Daemon):
             startuser=pwd.getpwuid(os.getuid())
             try:
                 runasuser=pwd.getpwnam(self.config['WireGate']['user'])
-        
-                ##Set Permissions
+                getpath = lambda x: "/".join(x.split("/")[:-1])
+                        
+                ##Set Permissions on 
                 os.chown(self.config['WireGate']['pidfile'],runasuser[2],runasuser[3])
                 os.chown(self.config['WireGate']['logfile'],runasuser[2],runasuser[3])
                 os.chown(self.config['WireGate']['datastore'],runasuser[2],runasuser[3])
-                os.setregid(runasuser[3],runasuser[3])
-                os.setreuid(runasuser[2],runasuser[2])
+                
+                ##removed until fixing permissions
+                #os.setregid(runasuser[3],runasuser[3])
+                #os.setreuid(runasuser[2],runasuser[2])
         
-                self.log("Change User/Group from %s(%d) to %s(%d)" % (startuser[0],startuser[2],runasuser[0],runasuser[2]))
+                self.log("Change User/Group from %s(%d) to %s(%d) FIXME: disabled" % (startuser[0],startuser[2],runasuser[0],runasuser[2]))
             
             except KeyError:
                 pass
-        if os.getuid()==0:
-            self.log("\n### Run as root is not recommend\n### set user in pywiregate.conf\n\n")
+        if os.getuid() == 0:
+            self.log("### Run as root is not recommend ### set user in pywiregate.conf",'warn')
         
         ## Mainloop only checking for Watchdog
         while True:
@@ -224,16 +228,16 @@ class WireGate(daemon.Daemon):
             maxlevel = self.config['WireGate']['loglevel']
         if not filename:
             filename = self.config['WireGate']['logfile']
-        LEVELS = {'debug': logging.DEBUG,'info': logging.INFO,'notice': logging.NOTICE,'warning': logging.WARNING,'error': logging.ERROR,'critical': logging.CRITICAL}
-        level = LEVELS.get(maxlevel, logging.NOTSET)
+        LEVELS = {'debug': log.logging.DEBUG,'info': log.logging.INFO,'notice': log.logging.NOTICE,'warning': log.logging.WARNING,'error': log.logging.ERROR,'critical': log.logging.CRITICAL}
+        level = LEVELS.get(maxlevel, log.logging.NOTSET)
         # create logger
 
-        formatter = logging.Formatter('%(asctime)s %(name)-12s: %(levelname)-8s %(message)s')
-        logger = logging.getLogger(instance)
+        formatter = log.logging.Formatter('%(asctime)s %(name)-12s: %(levelname)-8s %(message)s')
+        logger = log.logging.getLogger(instance)
         logger.setLevel(level)
         if filename:
             ## python handle logrotating
-            handler = logging.handlers.TimedRotatingFileHandler(filename,'MIDNIGHT',encoding='utf-8',backupCount=7)
+            handler = log.logging.handlers.TimedRotatingFileHandler(filename,'MIDNIGHT',encoding='utf-8',backupCount=7)
             
             ## Handler if logrotate handles Logfiles
             #handler = logging.handlers.WatchedFileHandle(filename)
@@ -245,7 +249,7 @@ class WireGate(daemon.Daemon):
         # create console handler and set level to debug
         if self.REDIRECTIO:
             #console = logging.StreamHandler()
-            console = logging.isoStreamHandler()
+            console = log.isoStreamHandler()
             console.setFormatter(formatter)            
             logger.addHandler(console)
         return logger
@@ -257,22 +261,29 @@ class WireGate(daemon.Daemon):
         except KeyError:
             logger = self.LOGGER[instance] = self.createLog(instance)
             pass
-        if severity=="debug":
-            logger.debug(msg)
-        elif severity=="info":
-            logger.info(msg)
-        elif severity=="notice":
-            logger.notice(msg)
-        elif severity=="warning":
-            logger.warning(msg)
-        elif severity=="warn":
-            logger.warning(msg)
-        elif severity=="error":
-            logger.error(msg)
-        elif severity=="critical":
-            logger.critical(msg)
-        else:
-            logger.info(msg)
+        try:
+            if severity=="debug":
+                logger.debug(msg)
+            elif severity=="info":
+                logger.info(msg)
+            elif severity=="notice":
+                logger.notice(msg)
+            elif severity=="warning":
+                logger.warning(msg)
+            elif severity=="warn":
+                #print "SEVERITY: %r " % logging._levelNames
+
+                logger.warning(msg)
+            elif severity=="error":
+                logger.error(msg)
+            elif severity=="critical":
+                logger.critical(msg)
+            else:
+                logger.info(msg)
+        except:
+            ## logging shouldnt break execution
+            #pass
+            raise
 
 
     def debug(self,msg):

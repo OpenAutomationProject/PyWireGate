@@ -1,25 +1,29 @@
 # -*- coding: iso8859-1 -*-
-from logging import *
-import logging.handlers as handlers
 
+## add notice as loglevel
 
+import logging
+import logging.handlers
+import sys
+
+logging._acquireLock()
 ## redefine logging
 # Change the default levels to include NOTICE in
 # the proper order of priority
-FATAL = CRITICAL = 60
-ERROR = 50
-WARN = WARNING = 40
-NOTICE = 30
+logging.FATAL = logging.CRITICAL = FATAL = CRITICAL = 60
+logging.ERROR = ERROR = 50
+logging.WARN = logging.WARNING = WARN = WARNING = 40
+logging.NOTICE = NOTICE = 30
 
 # insert the levels with all the redefined values
 # anything below NOTICE we don't have to add back in, its
 # not getting redefined above with a new value
-addLevelName(NOTICE, 'NOTICE')
-addLevelName(WARNING, 'WARNING')
-addLevelName(WARN, 'WARN')
-addLevelName(ERROR, 'ERROR')
-addLevelName(FATAL, 'FATAL')
-addLevelName(CRITICAL, 'CRITICAL')
+logging.addLevelName(NOTICE, 'NOTICE')
+logging.addLevelName(WARNING, 'WARNING')
+logging.addLevelName(WARN, 'WARN')
+logging.addLevelName(ERROR, 'ERROR')
+logging.addLevelName(FATAL, 'FATAL')
+logging.addLevelName(CRITICAL, 'CRITICAL')
 
 # define a new logger function for notice
 # this is exactly like existing info, critical, debug...etc
@@ -39,7 +43,7 @@ with
         apply(self._log, (NOTICE, msg, args), kwargs)
 
 # make the notice function known in the system Logger class
-Logger.notice = Logger_notice
+logging.Logger.notice = Logger_notice
 
 # define a new root level notice function
 # this is exactly like existing info, critical, debug...etc
@@ -52,17 +56,18 @@ def root_notice(msg, *args, **kwargs):
     apply(root.notice, (msg,)+args, kwargs)
 
 # make the notice root level function known
-notice = root_notice
+logging.notice = root_notice
 
 # add NOTICE to the priority map of all the levels
-handlers.SysLogHandler.priority_map['NOTICE'] = 'notice'
+logging.handlers.SysLogHandler.priority_map['NOTICE'] = 'notice'
 
+logging._releaseLock()
 
-class isoStreamHandler(StreamHandler):
+class isoStreamHandler(logging.StreamHandler):
     def emit(self,record):
         #record.message = record.message.decode('utf-8').encode('iso-8859-15')
         record.message = record.message.encode(sys.stderr.encoding)
-        StreamHandler.emit(self,record)
+        logging.StreamHandler.emit(self,record)
 
 
 
