@@ -35,8 +35,12 @@ class console_server(ConnectorServer):
     CONNECTOR_VERSION = 0.1
     CONNECTOR_LOGNAME = 'console_server'
 
-    def __init__(self,WireGateInstance, instanceName):
-        self.WG = WireGateInstance
+    def __init__(self,parent, instanceName):
+        self._parent = parent
+        if parent:
+            self.WG = parent.WG
+        else:
+            self.WG = False
         self.instanceName = instanceName
         defaultconfig = {
             'port' : 4401

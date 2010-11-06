@@ -20,12 +20,15 @@ import DPT_Types
 import time
 
 class groupsocket:
-    def __init__(self, WireGateInstance, connectorInstance):
-        self.WG = WireGateInstance
-        self.KNX = connectorInstance
+    def __init__(self, parent):
+        self._parent = parent
+        if parent:
+            self.WG = parent.WG
+        else:
+            self.WG = False
         self.nicehex=lambda x: " ".join(map(lambda y:"%.2x" % y,x))
         self.tobinstr=lambda n,b=8: "".join([str((n >> y) & 1) for y in range(b-1, -1, -1)])
-        self.dpt = DPT_Types.dpt_type(WireGateInstance)
+        self.dpt = DPT_Types.dpt_type(self)
 
     def decode(self,buf,src,dst):
         ## Accept List Hex or Binary Data
@@ -49,7 +52,7 @@ class groupsocket:
         msg['srcaddr'] = self._decodePhysicalAddr(src)
         try:
             msg['dstaddr'] = self._decodeGrpAddr(dst)
-            id = "%s:%s" % (self.KNX.instanceName, msg['dstaddr'])
+            id = "%s:%s" % (self._parent.instanceName, msg['dstaddr'])
             if (buf[0] & 0x3 or (buf[1] & 0xC0) == 0xC0):
                 ##FIXME: unknown APDU
                 self.debug("unknown APDU from "+msg['srcaddr']+" to "+msg['dstaddr']+ " raw:"+buf)
@@ -88,9 +91,14 @@ class groupsocket:
         
     def _decodeGrpAddr(self,raw):
         return "%d/%d/%d" % ((raw >> 11) & 0x1f, (raw >> 8) & 0x07, (raw) & 0xff)
+
+    def log(self,msg,severity='info',instance=False):
+        if not instance:
+            instance = self.instanceName
+        self._parent.log(msg,severity,instance)
         
     def debug(self,msg):
-        #print "DEBUG: GROUPSOCKET: "+ repr(msg) 
+        self.log("DEBUG: GROUPSOCKET: "+ repr(msg),'debug')
         pass
 
 

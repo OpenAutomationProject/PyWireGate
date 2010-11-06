@@ -20,48 +20,77 @@ import threading
 import time
 
 
-class cycler:
-    def __init__(self,WireGateInstance):
-        self.WG = WireGateInstance
-        
+class TaskRunner:
+    def __init__(self,parent):
+        self._parent = parent
+        if parent:
+            self.WG = parent.WG
+        else:
+            self.WG = False
         self.isrunning = True
-        ## Dummy Timer
+
         self.waiting = threading.Timer(0,lambda: None)
-        self.waiting.setDaemon(1)
+
+
         self.mutex = threading.RLock()
+        
+        ## function for time based sortingg of tasks
         self.getTime = lambda x: x.getTime
-        self.timerList = []
+        
+        ## all not running tasks goes here
+        self.taskList = []
+        
+        ## all started tasks goes here
         self.running = {}
     
     def debug(self,msg):
         print "DEBUG Cycler: %s" % msg
-    def remove(self, obj):
+
+    def remove(self, task):
         if not self.isrunning:
-            ## dont try to get a mutex
+            
+            ## dont try to get a mutex on shutdown
             return False
         try:
             self.mutex.acquire()
-            if obj in self.timerList:
+            if task in self.taskList:
                 try:
-                    self.timerList.remove(obj)
+                    self.taskList.remove(task)
                 except:
                     pass
-                self.debug("Removed %r" % obj.action)
-                if len(self.timerList) == 0:
+                self.debug("Removed %r" % task.action)
+                if len(self.taskList) == 0:
                     ## kill waiting timer
                     self.debug("Cancel GLobal wait")
                     self.waiting.cancel()
-            if obj in self.running:
+                    
+            if task in self.running:
                 try:
-                    if self.running[obj].isAlive():
-                        self.running[obj].cancel()
-                        self.debug("Canceled %r" % obj.args)
+                    if self.running[task].isAlive():
+                        self.running[task].cancel()
+                        self.debug("Canceled %r" % task.args)
                 finally:
-                    self.debug("terminated %r" % obj.args)
-                    del self.running[obj]
+                    self.debug("terminated %r" % task.args)
+                    del self.running[task]
 
         finally:
             self.mutex.release()
+
+
+
+    def event(self,rtime,function,*args,**kwargs):
+        if not self.isrunning:
+            ## dont try to get a mutex
+            return False
+        self.debug("adding event: %r (%r / %r)" % (function,args,kwargs))
+        ## rtime is a date as unix timestamp
+        rtime = rtime - time.time()
+        if rtime >0:
+            task = Task(self,rtime,function,args=args,kwargs=kwargs)
+            self._Shedule(task)
+            return task
+        else:
+            print "expired  %r (%r / %r)" % (function,args,kwargs)
 
     
     def add(self,rtime,function,*args,**kwargs):
@@ -69,52 +98,68 @@ class cycler:
             ## dont try to get a mutex
             return False
         self.debug("adding task: %r (%r / %r)" % (function,args,kwargs))
-        self.addShedule(sheduleObject(self,self.WG,rtime,function,args=args,kwargs=kwargs))
+        task = Task(self,rtime,function,args=args,kwargs=kwargs)
+        self._Shedule(task)
+        return task
     
     def cycle(self,rtime,function,*args,**kwargs):
         if not self.isrunning:
             ## dont try to get a mutex
             return False
         self.debug("adding cycliv task: %r (%r / %r)" % (function,args,kwargs))
-        self.addShedule(sheduleObject(self,self.WG,rtime,function,cycle=True,args=args,kwargs=kwargs))
+        task = Task(self,rtime,function,cycle=True,args=args,kwargs=kwargs)
+        self._Shedule(task)
+        return task
     
-    def addShedule(self,shed):
-        print "ADD _shed %r" % shed
+    def _Shedule(self,task):
+        print "adding task %r" % task
         self.mutex.acquire()
-        self.timerList.append(shed)
+        self.taskList.append(task)
+        
         ## Try to stop running timer
+        ## Fixme isalive
         try:
             self.waiting.cancel()
         except:
             pass
-        self.timerList.sort(key=self.getTime)
+        
+        self.taskList.sort(key=self.getTime)
         self.mutex.release()
 
         ## check if any Timer need activation
         self._check()
         
-        return shed
-    
-    
+        
     def _check(self):
         self.debug("Cycle")
         try:
             self.mutex.acquire()
+            print "acitve tasks %d " % threading.activeCount()
+            atasks = "Active tasks: "
+            for rtask in threading.enumerate():
+                atasks += " %r" % rtask.getName()
+                    
+                
+            print atasks
             ## all actions that need activation in next 60seconds
-            for shedobj in filter(lambda x: x.getTime() < 60, self.timerList):
+            for task in filter(lambda x: x.getTime() < 60, self.taskList):
                 try: 
-                    self.running[shedobj] = threading.Timer(shedobj.getTime(),shedobj.run)
-                    self.running[shedobj].start()
-                    #print "run %s" % t.name
+                    exectime = task.getTime()
+                    name = "event"
+                    if task.cycle:
+                        name = "cycle"
+                    self.running[task] = threading.Timer(exectime,task.run)
+                    self.running[task].setName("%s_%r" % (name,time.asctime(time.localtime(task.timer))))
+                    self.running[task].start()
                 except:
                     print "Failed"
                     raise
-                ## remove from List because its now in the past
-                self.timerList.remove(shedobj)
+                ## remove from List because its now active
+                self.taskList.remove(task)
         finally:
-            if len(self.timerList) >0:
-                print "Wait for later timer %r" % (self.timerList[0].getTime()-5)
-                self.waiting = threading.Timer(self.timerList[0].getTime()-5 ,self._check)
+            if len(self.taskList) >0:
+                print "Wait for later timer %r" % (self.taskList[0].getTime()-5)
+                self.waiting = threading.Timer(self.taskList[0].getTime()-5 ,self._check)
                 self.waiting.start()
             self.mutex.release()
 
@@ -125,35 +170,36 @@ class cycler:
         try:
             ## stop all new timer
             self.mutex.acquire()
-            print "Have Mutex"
-            self.waiting.cancel()
-            try:
-                self.waiting.join(2)
-            except:
-                ## maybe not even running
-                pass
-            print "Thread canceld"
-            self.timerList = []
-            for obj in self.running.keys():
-                print "cancel task %r" % obj.args
+            self.taskList = []
+            for task in self.running.keys():
+                print "acitve tasks %d " % threading.activeCount()
+                print "cancel task %r" % task.args
                 try:
-                    tobecanceled = self.running.pop(obj)
-                    
+                    rtask = self.running.pop(task)
+                    rtask.cancel()
+                    rtask.join()
                 except:
                     pass
-                tobecanceled.cancel()
-                tobecanceled.is
-                    tobecanceled.join(2)
                 
+            print self.waiting
             
+            print "Have Mutex"
+            try:
+                self.waiting.cancel()
+                self.waiting.join()
+            except:
+                pass
+            print "Thread canceld"
+
+
         except:
             self.debug("SHUTDOWN FAILED")
 
 
-class sheduleObject:
-    def __init__(self,parent,WireGateInstance,rtime,function,cycle=False,args = [],kwargs={}):
+class Task:
+    def __init__(self,parent,rtime,function,cycle=False,args = [],kwargs={}):
         self.Parent = parent
-        self.WG = WireGateInstance
+        self.WG = parent.WG
         self.delay = rtime
         self.cycle = cycle
         self._set()
@@ -171,7 +217,7 @@ class sheduleObject:
         self.Parent.remove(self)
         if self.cycle:
             self._set()
-            self.Parent.addShedule(self)
+            self.Parent._Shedule(self)
             
 
     def getTime(self):
@@ -181,23 +227,37 @@ class sheduleObject:
 
 if __name__ == '__main__':
     try:
-        cycle = cycler(False)
+        cycle = TaskRunner(False)
         import sys
         import atexit
-        atexit.register(cycle.shutdown)
+        #atexit.register(cycle.shutdown)
         def write_time(text=''):
             print "running %s: %f" % (text,time.time())
         write_time('Main')
-        cycle.cycle(4,write_time,"Cycletask1!")
-        #longtask=cycle.add(80,write_time,"task2!")
-        #f=cycle.add(7,write_time,"task3!")
+        cycle1 = cycle.cycle(4,write_time,"Cycletask1!")
+        cycle2 = cycle.cycle(8,write_time,"Cycletask2!")
+        
+        longtask=cycle.add(80,write_time,"Longtask 80 secs!")
+        
+        f=cycle.add(7,write_time,"task3!")
+        
+        cycle.event(time.mktime((2010,11,6,21,54,00,0,0,0)),write_time,"event 21:54")
         time.sleep(2)
-        #cycle.remove(f)
-        #time.sleep(5)
-        #cycle.remove(longtask)
+        cycle.remove(f)
+        time.sleep(5)
+        print "##################remove longtask %r" % longtask
+        cycle.remove(longtask)
+        
+        #cycle.cycle(4,write_time,"Cycletask6!")
+        print "KILL CYCLE"
+        cycle.remove(cycle1)
+        cycle.remove(cycle2)
         #cycle.shutdown()
         #cycle.add(6,write_time,"task4!")
+        while threading.activeCount() > 1:
+            time.sleep(1)
     except KeyboardInterrupt:
-        #cycle.shutdown()
+        cycle.shutdown()
+        cycle.waiting.join(5)
         sys.exit(0)
     

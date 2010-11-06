@@ -23,8 +23,12 @@
 import struct
 
 class dpt_type:
-    def __init__(self,WireGateInstance):
-        self.WG = WireGateInstance
+    def __init__(self,parent):
+        self._parent = parent
+        if parent:
+            self.WG = parent.WG
+        else:
+            self.WG = False
         self.DECODER = {
             1:self.decodeDPT1,       # EIS 1/7       / 1 bit  0=Aus/1=Ein
             2:self.decodeDPT2,       # EIS 8         / 2 bit  0,1=Frei/2=Prio_Aus/3=Prio_Ein
@@ -133,8 +137,8 @@ class dpt_type:
     def log(self,msg,severity='info',instance=False):
         if not instance:
             instance = "dpt-types"
-        if self.WG:
-            self.WG.log(msg,severity,instance)
+        if self._parent:
+            self._parent.log(msg,severity,instance)
 
     def toByteArray(self,val,length):
         ## Set ByteArray

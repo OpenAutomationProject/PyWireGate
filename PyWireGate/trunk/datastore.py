@@ -15,7 +15,7 @@ class datastore:
     """
         Datastore Instance
     """
-    def __init__(self,WireGateInstance):
+    def __init__(self,parent):
         ####################################################
         ## Function: __init__
         ## Parameter:
@@ -24,7 +24,8 @@ class datastore:
         ##    Contructor for the DATASTORE instance
         ##
         ####################################################
-        self.WG = WireGateInstance
+        self._parent = parent
+        self.WG = parent.WG
         self.log("DATASTORE starting up")
         self.DBLOADED = False
         self.dataobjects = {}
@@ -82,7 +83,7 @@ class datastore:
             type(self.dataobjects[id])
         except KeyError:
             ## create a new one if it don't exist
-            self.dataobjects[id] = dataObject(self.WG,id)
+            self.dataobjects[id] = dataObject(self,id)
         ## return it
         self.locked.release()
         return self.dataobjects[id]
@@ -95,7 +96,7 @@ class datastore:
             loaddict = json.load(db)
             db.close()
             for name, obj in loaddict.items():
-                self.dataobjects[name] = dataObject(self.WG,obj['id'],obj['name'])
+                self.dataobjects[name] = dataObject(self,obj['id'],obj['name'])
                 self.dataobjects[name].lastupdate = obj['lastupdate']
                 self.dataobjects[name].config = obj['config']
                 self.dataobjects[name].connected = obj['connected']
@@ -154,8 +155,9 @@ class datastore:
 
 
 class dataObject:
-    def __init__(self,WireGateInstance,id,name=False):
-        self.WG = WireGateInstance
+    def __init__(self,parent,id,name=False):
+        self._parent = parent
+        self.WG = parent.WG
         
         ## Threadlocking
         self.write_mutex = threading.RLock()

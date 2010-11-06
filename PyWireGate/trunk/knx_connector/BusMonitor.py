@@ -20,12 +20,15 @@ import DPT_Types
 import time
 
 class busmonitor:
-    def __init__(self, WireGateInstance,connectorInstance):
-        self.WG = WireGateInstance
-        self.KNX = connectorInstance
+    def __init__(self, parent):
+        self._parent = parent
+        if parent:
+            self.WG = parent.WG
+        else:
+            self.WG = False
         self.nicehex=lambda x: " ".join(map(lambda y:"%.2x" % y,x))
         self.tobinstr=lambda n,b=8: "".join([str((n >> y) & 1) for y in range(b-1, -1, -1)])
-        self.dpt = DPT_Types.dpt_type(WireGateInstance)
+        self.dpt = DPT_Types.dpt_type(self)
 
         ## FIXME: Not fully implemented
         self.apcicodes = {
@@ -101,7 +104,7 @@ class busmonitor:
             if msg['ctrl2']['DestAddrType'] == 0 and msg['apdu']['tpdu'] == "T_DATA_XXX_REQ":
                 msg['dstaddr'] = self._decodeGrpAddr(buf[3:5])
                 
-                id = "%s:%s" % (self.KNX.instanceName, msg['dstaddr'])
+                id = "%s:%s" % (self._parent.instanceName, msg['dstaddr'])
 
                 ## search Datastoreobject
                 dsobj = self.WG.DATASTORE.get(id)
@@ -265,10 +268,15 @@ class busmonitor:
         except KeyError:
             pass
         return apci
+
+    def log(self,msg,severity='info',instance=False):
+        if not instance:
+            instance = self.instanceName
+        self._parent.log(msg,severity,instance)
+
         
     def debug(self,msg):
-        #print "DEBUG: BUSMON: "+ repr(msg) 
-        pass
+        self.log("DEBUG: BUSMON: "+ repr(msg),'debug')
 
 
 if __name__ == "__main__":

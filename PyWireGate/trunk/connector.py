@@ -7,8 +7,9 @@ class Connector:
     CONNECTOR_LOGNAME = __name__
 
     isrunning=False
-    def __init__(self,WireGateInstance,instanceName):
-        self.WG = WireGateInstance
+    def __init__(self,parent,instanceName):
+        self._parent = parent
+        self.WG = parent.WG
         self.instanceName = instanceName
         """Overide"""
     def start(self):
@@ -24,7 +25,7 @@ class Connector:
     def log(self,msg,severity='info',instance=False):
         if not instance:
             instance = self.instanceName
-        self.WG.log(msg,severity,instance)
+        self._parent.log(msg,severity,instance)
 
     def shutdown(self):
         self.log("%s (%s) shutting down" % (self.CONNECTOR_NAME, self.instanceName) ,'info','WireGate')

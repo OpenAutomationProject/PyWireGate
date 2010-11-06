@@ -31,6 +31,7 @@ import datastore
 
 class WireGate(daemon.Daemon):
     def __init__(self,REDIRECTIO=False):
+        self._parent = self
         self.WG = self
         self.watchdoglist = {}
         self.connectors = {}

@@ -33,17 +33,18 @@ class knx_connector(Connector):
     CONNECTOR_NAME = 'KNX Connector'
     CONNECTOR_VERSION = 0.2
     CONNECTOR_LOGNAME = 'knx_connector'
-    def __init__(self,WireGateInstance, instanceName):
-        self.WG = WireGateInstance
+    def __init__(self,parent, instanceName):
+        self._parent = parent
+        self.WG = parent.WG
         self.instanceName = instanceName
 
         self.KNX = EIBConnection.EIBConnection()
         self.KNXBuffer = EIBConnection.EIBBuffer()
         self.KNXSrc = EIBConnection.EIBAddr()
         self.KNXDst = EIBConnection.EIBAddr()
-        self.busmon = BusMonitor.busmonitor(WireGateInstance,self)
-        self.groupsocket = GroupSocket.groupsocket(WireGateInstance,self)
-        self.dpt = DPT_Types.dpt_type(WireGateInstance)
+        self.busmon = BusMonitor.busmonitor(self)
+        self.groupsocket = GroupSocket.groupsocket(self)
+        self.dpt = DPT_Types.dpt_type(self)
         
         self.GrpAddrRegex = re.compile(r"(?:|(\d+)\x2F)(\d+)\x2F(\d+)$",re.MULTILINE)
 
