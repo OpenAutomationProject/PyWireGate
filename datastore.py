@@ -8,7 +8,11 @@ try:
     ## use included json in > Python 2.6 
     import json
 except ImportError:
-    import simplejson as json
+    try:
+        import simplejson as json
+    except ImportError:
+        print >>sys.stderr, "apt-get install python-simplejson"
+        sys.exit(1)
 
 
 class datastore:
@@ -35,7 +39,7 @@ class datastore:
         self.load()
         
     
-    def update(self,id,val):
+    def update(self,id,val,connector=False):
         ## Update the communication Object with value
         ####################################################
         ## Function: update
@@ -48,7 +52,7 @@ class datastore:
         ####################################################
         ## 
         ## get the Datastore object
-        obj = self.get(id)
+        obj = self.get(id,connector=connector)
         self.debug("Updating %s (%s): %r" % (obj.name,id,val))
 
         ## Set the value of the object
@@ -68,7 +72,7 @@ class datastore:
         ## return the object for additional updates
         return obj
 
-    def get(self,id):
+    def get(self,id,connector=False):
         ####################################################
         ## Function: get
         ## Parameter:
@@ -84,6 +88,8 @@ class datastore:
         except KeyError:
             ## create a new one if it don't exist
             self.dataobjects[id] = dataObject(self,id)
+            if connector:
+                self.dataobjects[id].config = connector.get_ds_defaults(id)
         ## return it
         self.locked.release()
         return self.dataobjects[id]
@@ -133,7 +139,6 @@ class datastore:
         dbfile = codecs.open(self.WG.config['WireGate']['datastore'],"wb",encoding='utf-8')
         utfdb = json.dumps(savedict,dbfile,ensure_ascii=False,sort_keys=True,indent=3)
         dbfile.write(utfdb)
-        #json.dump(savedict,dbfile,sort_keys=True,indent=3)
         dbfile.close()
         
 
@@ -199,8 +204,12 @@ class dataObject:
         ## self override 
         ## override with connector send function
         if self.namespace:
-            self._setValue = self.WG.connectors[self.namespace].setValue
-            self.WG.connectors[self.namespace].setValue(refered_self)
+            try:
+                self.write_mutex.acquire()
+                self._setValue = self.WG.connectors[self.namespace].setValue
+                self.WG.connectors[self.namespace].setValue(refered_self)
+            finally:
+                self.write_mutex.release()
 
     def setValue(self,val,send=False):
         try:

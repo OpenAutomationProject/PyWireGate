@@ -52,6 +52,12 @@ class Connector:
         self.log("unconfigured setValue in %r called for %s" % (self,dsobj.name) ,'warn','WireGate')
         pass
 
+    def get_ds_defaults(self,id):
+        ## the defualt config for new Datasotre Items
+        config = {
+        }
+        return config
+
 import SocketServer
 import socket
 class ConnectorServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer,Connector):
