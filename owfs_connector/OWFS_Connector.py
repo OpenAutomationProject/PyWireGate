@@ -204,9 +204,10 @@ class owfs_connector(Connector):
                 self.debug("Reading from path %s" % owfspath)
                 try:
                     ## read uncached and put into local-list
+                    data = self.owfs.read(owfspath)
                     try:
                         self.mutex.acquire()
-                        self.busmaster[busname]['sensors'][sensor][get] = self.owfs.read(owfspath)
+                        self.busmaster[busname]['sensors'][sensor][get] = data
                     finally:
                         self.mutex.release()
                 except:
