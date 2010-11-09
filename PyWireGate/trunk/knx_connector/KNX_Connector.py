@@ -150,8 +150,10 @@ class knx_connector(Connector):
             self.errormsg("Failed send %r to %r" % (msg,dstaddr))
 
     def setValue(self,dsobj,msg=False):
-        if not msg:
-            msg = dsobj.getValue()
-        self.debug("SEND %r to %s (%s)" % (msg,dsobj.name,dsobj.id))
-        self.send(self.dpt.encode(msg,dsobj=dsobj),dsobj.id)
-        
+        try:
+            if not msg:
+                msg = dsobj.getValue()
+            self.debug("SEND %r to %s (%s)" % (msg,dsobj.name,dsobj.id))
+            self.send(self.dpt.encode(msg,dsobj=dsobj),dsobj.id)
+        except:
+            print "----------- ERROR IN KNX_CONNECTOR.setValue ----------------"

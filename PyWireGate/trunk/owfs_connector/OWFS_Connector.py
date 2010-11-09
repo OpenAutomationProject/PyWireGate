@@ -34,6 +34,8 @@ class owfs_connector(Connector):
             self.WG = False
         self.instanceName = instanceName
         
+        self.mutex = threading.RLock()
+        
         defaultconfig = {
             'cycletime' : 15,
             'server' : '127.0.0.1',
@@ -69,6 +71,13 @@ class owfs_connector(Connector):
         self.sensors = {}
         self.start()
 
+    def get_ds_defaults(self,id):
+        ## the defualt config for new Datasotre Items
+        config = {}
+        if id[-11:] == 'temperature':
+            config['resolution'] = 10
+        return config
+    
     def run(self):
         cnt = 10
         while self.isrunning:
@@ -113,15 +122,19 @@ class owfs_connector(Connector):
                         if self.findbusmaster(bus):
                             ## if this has no subbuses add it to the list
                             try:
-                                ## check if bus already in list and set time
-                                self.busmaster[bus]['lastseen'] = time.time()
-                            except KeyError:
-                                ## add to list
-                                self.busmaster[bus] = {
-                                    'sensors' : {},
-                                    'lastseen' : time.time(),
-                                    'readthread' : None
-                                }
+                                self.mutex.acquire()
+                                try:
+                                    ## check if bus already in list and set time
+                                    self.busmaster[bus]['lastseen'] = time.time()
+                                except KeyError:
+                                    ## add to list
+                                    self.busmaster[bus] = {
+                                        'sensors' : {},
+                                        'lastseen' : time.time(),
+                                        'readthread' : None
+                                    }
+                            finally:
+                                self.mutex.release()
                             self.findsensors(bus)
                     except:
                         ## ignore all OWFS Errors
@@ -151,11 +164,15 @@ class owfs_connector(Connector):
                     interfaces = self.supportedsensors[sensortype]
                     ### add it to the list of active sensors 
                     ## FIXME: check for old sensor no longer active and remove
-                    self.busmaster[path]['sensors'][sensor] = {
-                        'type':sensortype,
-                        'interfaces':interfaces,
-                        'resolution':'10' ## Resolution schould be read from Datastore
-                    }
+                    try:
+                        self.mutex.acquire()
+                        self.busmaster[path]['sensors'][sensor] = {
+                            'type':sensortype,
+                            'interfaces':interfaces,
+                            'resolution':'10' ## Resolution schould be read from Datastore
+                        }
+                    finally:
+                        self.mutex.release()
                 
                 except KeyError:
                     self.debug("unsupported Type: %r" % sensortype)
@@ -181,12 +198,17 @@ class owfs_connector(Connector):
                 ## get the Datastore Object and look for config
                 obj = self.WG.DATASTORE.get(id)
                 if "resolution" in obj.config:
-                    resolution = obj.config['resolution']
+                    resolution = str(obj.config['resolution'])
                     
                 owfspath = "/uncached/%s/%s%s" % (sensor,get,resolution)
+                self.debug("Reading from path %s" % owfspath)
                 try:
                     ## read uncached and put into local-list
-                    self.busmaster[busname]['sensors'][sensor][get] = self.owfs.read(owfspath)
+                    try:
+                        self.mutex.acquire()
+                        self.busmaster[busname]['sensors'][sensor][get] = self.owfs.read(owfspath)
+                    finally:
+                        self.mutex.release()
                 except:
                     ## ignore all OWFS Errors
                     self.WG.errorlog("Reading from path %s failed" % owfspath)                    
@@ -199,7 +221,7 @@ class owfs_connector(Connector):
                 except:
                     self.WG.errorlog()
         self.busmaster[busname]['readthread'] = None
-        self.debug("Thread for %s finshed reading %d sensors in % f secs " % (busname,len(self.busmaster[busname]['sensors']), time.time() - readtime))
+        self.debug("Thread for %s finshed reading %d sensors in %f secs " % (busname,len(self.busmaster[busname]['sensors']), time.time() - readtime))
                     
     def read(self):
         for busname in self.busmaster.keys():
@@ -207,5 +229,9 @@ class owfs_connector(Connector):
                 if not self.busmaster[busname]['readthread']:
                     self.debug("Start read Thread for %s" % busname)
                     threadname = "OWFS-Reader_%s" % busname
-                    self.busmaster[busname]['readthread'] = threading.Thread(target=self._read,args=[busname],name=threadname)
-                    self.busmaster[busname]['readthread'].start()
+                    try:
+                        self.mutex.acquire()
+                        self.busmaster[busname]['readthread'] = threading.Thread(target=self._read,args=[busname],name=threadname)
+                        self.busmaster[busname]['readthread'].start()
+                    finally:
+                        self.mutex.release()
