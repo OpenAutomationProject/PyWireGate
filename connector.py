@@ -30,6 +30,8 @@ class Connector:
     def shutdown(self):
         self.log("%s (%s) shutting down" % (self.CONNECTOR_NAME, self.instanceName) ,'info','WireGate')
         self.isrunning=False
+        if hasattr(self,'_shutdown'):
+            self._shutdown()
         self._thread.join(2)
         if self._thread.isAlive():
             self.log("Shutdown Failed",'critical')
