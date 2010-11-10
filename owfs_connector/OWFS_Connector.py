@@ -37,7 +37,7 @@ class owfs_connector(Connector):
         self.mutex = threading.RLock()
         
         defaultconfig = {
-            'cycletime' : 60,
+            'cycletime' : 15,
             'server' : '127.0.0.1',
             'port' : 4304
         }
