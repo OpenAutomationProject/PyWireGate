@@ -191,18 +191,20 @@ class WireGate(daemon.Daemon):
                 pass
                 
         ## now save Datastore
-        self.DATASTORE.save()
+        self.DATASTORE.shutdown()
 
     
     ## Handle Errors
     def errorlog(self,msg=False):
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        tback = traceback.extract_tb(exc_traceback)
-        #type(self.ErrorLOGGER)
-        #print tback
-        #print exc_type, exc_value
+        try:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            tback = traceback.extract_tb(exc_traceback)
+        except:
+            exc_value = ""
+            exc_type = ""
+            tback = ""
+            pass
         if msg:
-            #print repr(msg)
             self.ErrorLOGGER.error(repr(msg))
         errmsg = "%r %r %r" % (exc_type, exc_value,tback)
         self.ErrorLOGGER.error(errmsg)
