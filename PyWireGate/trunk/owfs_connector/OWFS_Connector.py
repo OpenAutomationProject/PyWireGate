@@ -37,7 +37,7 @@ class owfs_connector(Connector):
         self.mutex = threading.RLock()
         
         defaultconfig = {
-            'cycletime' : 15,
+            'cycletime' : 60,
             'server' : '127.0.0.1',
             'port' : 4304
         }
@@ -51,31 +51,54 @@ class owfs_connector(Connector):
         self.issensor = re.compile(r"[0-9][0-9]\x2E[0-9a-fA-F]+")
         self.isbus = re.compile(r"\x2Fbus\x2E([0-9])+$", re.MULTILINE)
         
-        ## Sensors and their interfaces .. maybe import from a config file ?
-        self.supportedsensors = { 
-            "DS1420":[],
-            "DS18B20" : [
-                'temperature',
-                'power'
-             ], 
-            "DS2438":[
-                'temperature',
-                'humidity',
-                'vis',
-                'VDD'
-            ] 
-        }
+        owfsdir = str(connection).split( )[3][1:-17]
+        ## Sensors and their interfaces 
+        self.debug("Read ini file from %s" % owfsdir+"/sensors.ini")
+        sensorconfig =  self.WG.readConfig(owfsdir+"/sensors.ini")
+        self.supportedsensors = {}
+        for sensor in sensorconfig.keys():
+            ## add sensors
+            self.supportedsensors[sensor] = {}
+            cycledefault = defaultconfig['cycletime']
+            if 'cycle' in sensorconfig[sensor]:
+                cycledefault = sensorconfig[sensor]['cycle']
+                del sensorconfig[sensor]['cycle']
+            if 'interfaces' in sensorconfig[sensor]:
+                self.supportedsensors[sensor]['interfaces'] = {}
+                for interface in sensorconfig[sensor]['interfaces'].split(","):
+                    self.supportedsensors[sensor]['interfaces'][interface] = {'config': {'cycle':cycledefault} }
+                ## remove Interface key from dict
+                del sensorconfig[sensor]['interfaces']
+            
+            for key in sensorconfig[sensor].keys():
+                if key.startswith("config_"):
+                    try:
+                        cfg,interface,config = key.split("_",2)
+                        self.supportedsensors[sensor]['interfaces'][interface]['config'][config] = sensorconfig[sensor][key]
+                        print self.supportedsensors[sensor]['interfaces'][interface]
+                    except KeyError:
+                        pass
+                        
+        #self.supportedsensors =  self.WG.readConfig(owfsdir+"/sensors.ini")
         
         ## Local-list for the sensors
         self.busmaster = {}
         self.sensors = {}
         self.start()
 
+    def checkConfigDefaults(self,obj,default):
+        try:
+            for cfg in default['config'].keys():
+                    if cfg not in obj.config:
+                        obj.config[cfg] = default['config'][cfg]
+        except:
+            pass
+
     def get_ds_defaults(self,id):
         ## the defualt config for new Datasotre Items
         config = {}
-        if id[-11:] == 'temperature':
-            config['resolution'] = 10
+        #if id[-11:] == 'temperature':
+        #    config['resolution'] = 10
         return config
     
     def run(self):
@@ -136,12 +159,15 @@ class owfs_connector(Connector):
                             finally:
                                 self.mutex.release()
                             self.findsensors(bus)
+                            self.checkBusCycleTime(bus)
                     except:
                         ## ignore all OWFS Errors
                         pass
         return nochilds
 
-
+    def checkBusCycleTime(self,bus):
+        pass
+    
 
     def findsensors(self,path=""):
         uncachedpath = "/uncached%s" % path
@@ -158,28 +184,23 @@ class owfs_connector(Connector):
                 except:
                     ## ignore all OWFS Errors
                     continue
-                interfaces = []
-                try:
-                    ## check if sensort is supported
-                    interfaces = self.supportedsensors[sensortype]
-                    ### add it to the list of active sensors 
-                    ## FIXME: check for old sensor no longer active and remove
-                    try:
-                        self.mutex.acquire()
-                        self.busmaster[path]['sensors'][sensor] = {
-                            'type':sensortype,
-                            'interfaces':interfaces,
-                            'resolution':'10' ## Resolution schould be read from Datastore
-                        }
-                    finally:
-                        self.mutex.release()
-                
-                except KeyError:
+                if sensortype not in self.supportedsensors:
                     self.debug("unsupported Type: %r" % sensortype)
+                    continue                
+                if 'interfaces' not in self.supportedsensors[sensortype]:
+                    self.debug("Sensor Type: %r has no supported Interfaces" % sensortype)
                     continue
-                except:
-                    self.WG.errorlog()
-
+                
+                ### add it to the list of active sensors 
+                ## FIXME: check for old sensor no longer active and remove
+                try:
+                    self.mutex.acquire()
+                    self.busmaster[path]['sensors'][sensor] = {
+                        'type':sensortype,
+                        'interfaces': self.supportedsensors[sensortype]['interfaces']
+                    }
+                finally:
+                    self.mutex.release()
 
     
 
@@ -191,12 +212,14 @@ class owfs_connector(Connector):
             #self.sensors[sensor]['power'] = self.owfs.read("/"+sensor+"/power")
             
             ## loop through their interfaces
-            for get in self.busmaster[busname]['sensors'][sensor]['interfaces']:
+            for get in self.busmaster[busname]['sensors'][sensor]['interfaces'].keys():
                 resolution = ""
                 id = "%s:%s_%s" % (self.instanceName,sensor,get)
 
                 ## get the Datastore Object and look for config
                 obj = self.WG.DATASTORE.get(id)
+                sensortype = self.busmaster[busname]['sensors'][sensor]['type']
+                self.checkConfigDefaults(obj,self.supportedsensors[sensortype]['interfaces'][get])
                 if "resolution" in obj.config:
                     resolution = str(obj.config['resolution'])
                     
@@ -236,3 +259,5 @@ class owfs_connector(Connector):
                         self.busmaster[busname]['readthread'].start()
                     finally:
                         self.mutex.release()
+
+
