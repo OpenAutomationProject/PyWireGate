@@ -33,6 +33,10 @@ class datastore:
         self.log("DATASTORE starting up")
         self.DBLOADED = False
         self.dataobjects = {}
+        
+        self.cycleThreadLock = threading.RLock()
+        self.cycleThreads = {}
+        
         self.locked = threading.RLock()
         self.locked.acquire()
         ## Load JSON Database
@@ -141,8 +145,37 @@ class datastore:
         dbfile.write(utfdb)
         dbfile.close()
         
+
+    def attachThread(self,obj,threadObj=False):
+        try:
+            self.cycleThreadLock.acquire()
+            ## check only
+            if not threadObj:
+                return obj in self.cycleThreads
+            self.cycleThreads[obj] = threadObj
+        finally:
+            self.cycleThreadLock.release()
+            
+        return self.cycleThreads[obj]
+        
+        
+    def removeThread(self,obj):
+        self.cycleThreadLock.acquire()
+        del self.cycleThreads[obj]
+        self.cycleThreadLock.release()
+    
+
     def shutdown(self):
+        self.cycleThreadLock.acquire()
+        for obj in self.cycleThreads:
+            try:
+                obj.cancel()
+                obj.join()
+            except:
+                pass
+        self.cycleThreadLock.release()
         self.save()
+    
    
     def debug(self,msg):
         ####################################################
@@ -198,6 +231,8 @@ class dataObject:
         ## connector specific vars
         self.config = {}
         
+        self.cyclestore = []
+        
         ## connected Logics, communication objects ... goes here
         self.connected = []
 
@@ -213,6 +248,23 @@ class dataObject:
                 self.write_mutex.release()
 
     def setValue(self,val,send=False):
+        if 'sendcycle' in self.config:
+            if not self.WG.DATASTORE.attachThread(self):
+                self._parent.debug("start Cycle ID: %s" % self.id)
+                cycletime = float(self.config['sendcycle']) + self.lastupdate - time.time()
+                if cycletime < 0.0:
+                    cycletime = 0
+                self.cyclestore.append(val)
+                _cyclethread = self.WG.DATASTORE.attachThread(self,threading.Timer(cycletime,self._cycle))
+                #_cyclethread.setDaemon(1)
+                _cyclethread.start()
+            else:
+                self._parent.debug("ignore Cycle ID: %s" % self.id)
+                self.cyclestore.append(val)
+        else:
+            self._real_setValue(val,send)
+
+    def _real_setValue(self,val,send):
         try:
             ## get read lock
             self.read_mutex.acquire()
@@ -241,4 +293,18 @@ class dataObject:
               ## release lock
               self.read_mutex.release()
 
-    
+    def _cycle(self):
+        self._parent.debug("execute Cycle ID: %s" % self.id)
+        self.WG.DATASTORE.removeThread(self)
+        val = self.getValue()
+        if 'sendcycleoption' in self.config:
+            if self.config['sendcycleoption'] == 'average' and type(self.cyclestore[0]) in (int,float):
+                val = type(self.cyclestore[0])(0)
+                for i in self.cyclestore:
+                    val += i
+                val = val / len(self.cyclestore)
+                self._parent.debug("Cycle ID: %s average: %f (%r)" % (self.id, val, self.cyclestore ))
+                self.cyclestore = []
+        else:
+            val = self.cyclestore.pop()
+        self._real_setValue(val,False)
