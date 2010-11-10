@@ -111,16 +111,19 @@ class datastore:
                 self.dataobjects[name].config = obj['config']
                 self.dataobjects[name].connected = obj['connected']
             self.debug("%d entries loaded in DATASTORE" % len(self.dataobjects))
-            self.locked.release()
             self.DBLOADED = True
         except IOError:
             ## no DB File
             pass
-        
+        except ValueError:
+            ## empty DB File
+            self.DBLOADED = True
+            pass
         except:
             self.WG.errorlog()
             ## error
             pass
+        self.locked.release()
 
 
     def save(self):
@@ -167,10 +170,10 @@ class datastore:
 
     def shutdown(self):
         self.cycleThreadLock.acquire()
-        for obj in self.cycleThreads:
+        for obj in self.cycleThreads.keys():
             try:
-                obj.cancel()
-                obj.join()
+                self.cycleThreads[obj].cancel()
+                self.cycleThreads[obj].join()
             except:
                 pass
         self.cycleThreadLock.release()

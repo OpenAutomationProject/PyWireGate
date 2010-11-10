@@ -147,9 +147,11 @@ class WireGate(daemon.Daemon):
                 getpath = lambda x: "/".join(x.split("/")[:-1])
                         
                 ##Set Permissions on 
-                os.chown(self.config['WireGate']['pidfile'],runasuser[2],runasuser[3])
-                os.chown(self.config['WireGate']['logfile'],runasuser[2],runasuser[3])
-                os.chown(self.config['WireGate']['datastore'],runasuser[2],runasuser[3])
+                for sysfile in [self.config['WireGate']['pidfile'],self.config['WireGate']['logfile'],self.config['WireGate']['datastore']]:
+                    if not os.path.exists(sysfile):
+                        open(sysfile,'w').close()
+                    os.chown(sysfile,runasuser[2],runasuser[3])
+                
                 
                 ##removed until fixing permissions
                 #os.setregid(runasuser[3],runasuser[3])
