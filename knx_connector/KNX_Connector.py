@@ -213,7 +213,10 @@ class KNXSendQueue(Queue):
     def _put(self, item):
         ## add addr to active addr
         addr = item[0]
-        prio = int(self.activeaddr.count(addr) > 5)
+        prio = 0
+        if len(self.queue) > 10:
+            ## if queue size is over 10 use priority
+            prio = int(self.activeaddr.count(addr) > 5)
         self.activeaddr.append(addr)
         heapq.heappush(self.queue,(prio,item))
 
