@@ -141,7 +141,8 @@ class datastore:
         dbfile.write(utfdb)
         dbfile.close()
         
-
+    def shutdown(self):
+        self.save()
    
     def debug(self,msg):
         ####################################################
@@ -240,4 +241,4 @@ class dataObject:
               ## release lock
               self.read_mutex.release()
 
-        
+    
