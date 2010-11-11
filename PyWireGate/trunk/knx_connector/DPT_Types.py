@@ -21,6 +21,7 @@
 ### sondern als LIST mit den dezimalen Werten ist das decode hier ein bischen angepasst
 
 import struct
+import time
 
 class dpt_type:
     def __init__(self,parent):
@@ -325,7 +326,11 @@ class dpt_type:
             if len(timeval) == 3:
                 sec = int(timeval[2])
         elif type(val) in [float, int]:
-            now = time.localtime(val)
+            if val == 0:
+                ## current Time
+                now = time.localtime()
+            else:
+                now = time.localtime(val)
             weekday = now[6]
             hour = now[3]
             min = now[4]
@@ -355,12 +360,12 @@ class dpt_type:
         return u"%02d.%02d.%04d" % (day,mon,year)
 
     def encodeDPT11(self,val):
-        if type(val) in [float, int]:
-            tval = val
-        else:
-            tval =0
         ## make time struct accesible
-        utime = [v for v in time.localtime(tval)]
+        if type(val) in [float, int]:
+            utime = [v for v in time.localtime(tval)]
+        else:
+            utime = [v for v in time.localtime()]
+        
         if type(val) == str:
             datestr = val.split(".")
             if len(datestr) == 2:
