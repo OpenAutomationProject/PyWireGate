@@ -96,7 +96,10 @@ class dpt_type:
         elif dsobj:
             if "dptid" in dsobj.config:
                 dpt = dsobj.config['dptid']
-        else:
+        if dpt == -1:
+            dpt = self.guessDPT(msg)
+            #return False
+        if dpt == 0:
             return False
         return self._encode(msg,dpt)
     
@@ -438,6 +441,7 @@ class dpt_type:
         return res.decode('iso-8859-15')
 
     def encodeDPT16(self,val):
+        self.debug("DPT16encode: %r (%s)" % (val,type(val)))
         if type(val) == unicode:
             val = val.encode('iso-8859-15')
         ## max 14
@@ -478,7 +482,20 @@ class dpt_type:
             ## 14byte String
             return 16
         return 0
-
+    def guessDPT(self,raw):
+        if type(raw) == int:
+            if raw < 256:
+                return 5
+            elif raw < 655535:
+                return 7
+        elif type(raw) == float:
+            if raw > -671088.64 and raw < 670760.96:
+                return 9
+            else:
+                return 14
+        elif type(raw) == str or type(raw) == unicode:
+            return 16
+        return 0
 
 
 if __name__ == "__main__":

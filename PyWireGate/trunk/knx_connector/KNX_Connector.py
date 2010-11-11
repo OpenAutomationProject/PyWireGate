@@ -174,13 +174,17 @@ class knx_connector(Connector):
 
     def send(self,msg,dstaddr):
         try:
-            if type(msg) <> list:
-                self.log("Failed send %r to %r" % (msg,dstaddr),'warn')
-                return
             addr = self.str2grpaddr(dstaddr)
             if addr:
-                msg = [0,KNXWRITEFLAG] + msg
-                self.sendQueue.put((addr,msg))
+                apdu = [0]
+                if type(msg) == int:
+                   apdu.append(KNXWRITEFLAG | msg)
+                elif type(msg) == list:
+                   apdu = apdu +[KNXWRITEFLAG]+ msg
+                else:
+                    self.WG.errorlog("invalid Message  %r to %r" % (msg,dstaddr))
+                    return 
+                self.sendQueue.put((addr,apdu))
                 #self.KNX.EIBSendGroup(addr,msg)
         except:
             self.WG.errorlog("Failed send %r to %r" % (msg,dstaddr))
