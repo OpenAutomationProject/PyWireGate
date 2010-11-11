@@ -28,6 +28,8 @@ import log
 import ConfigParser
 
 import datastore
+import scheduler
+
 
 class WireGate(daemon.Daemon):
     def __init__(self,REDIRECTIO=False):
@@ -47,7 +49,6 @@ class WireGate(daemon.Daemon):
         
         ## Start the Datastore
         self.DATASTORE = datastore.datastore(self)
-
         
         ## Start the Daemon
         daemon.Daemon.__init__(self,self.config['WireGate']['pidfile'],REDIRECTIO)
@@ -138,6 +139,10 @@ class WireGate(daemon.Daemon):
             except:
                 self.WG.errorlog(connector)
                 pass
+        
+        ## Start the Sheduler
+        self.SCHEDULER = scheduler.scheduler(self)
+        self.SCHEDULER.start()
 
         if os.getuid() == 0:
             import pwd
@@ -186,6 +191,8 @@ class WireGate(daemon.Daemon):
         #for dobj in self.DATASTORE.dataobjects.keys():
         #    print dobj+": "+str(self.DATASTORE.dataobjects[dobj].getValue())
         self.log("### Shutdown WireGated ###")
+        
+        self.SCHEDULER.shutdown()
         for instance in self.connectors.keys():
             try:
                 self.connectors[instance].shutdown()
