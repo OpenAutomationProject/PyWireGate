@@ -361,9 +361,11 @@ class dpt_type:
 
     def encodeDPT11(self,val):
         ## make time struct accesible
+        utime=[]
         if type(val) in [float, int]:
-            utime = [v for v in time.localtime(tval)]
-        else:
+            if val > 0:
+                utime = [v for v in time.localtime(val)]
+        if utime == []:
             utime = [v for v in time.localtime()]
         
         if type(val) == str:

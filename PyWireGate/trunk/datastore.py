@@ -193,7 +193,8 @@ class datastore:
 class dataObject:
     def __init__(self,parent,id,name=False):
         self._parent = parent
-        self.WG = parent.WG
+        if parent:
+            self.WG = parent.WG
         
         ## Threadlocking
         self.write_mutex = threading.RLock()

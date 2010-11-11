@@ -47,12 +47,12 @@ class scheduler:
                 for uoption in obj.config['cron'].keys():
                     kwargs[str(uoption)] = str(obj.config['cron'][uoption])
                 
-                print "Adding %s - %r" % (shed,obj)
+                self.debug("Adding %s - %r" % (shed,obj))
                 setattr(obj.sendConnected.im_func,'__name__',"%s" % shed.encode('UTF-8'))
                 self.SCHEDULER.add_cron_job(self.WG.DATASTORE.dataobjects[shed].sendConnected,**kwargs)
 
     def shutdown(self):
-        print self.SCHEDULER.dump_jobs()
+        self.debug("shutdown Scheduler\n%s" % self.SCHEDULER.dump_jobs())
         self.SCHEDULER.shutdown()
         
     def debug(self,msg):
