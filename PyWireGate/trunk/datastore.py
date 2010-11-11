@@ -64,14 +64,7 @@ class datastore:
         
         ##TODO: central subscriber function for other connectore or servers
         
-        for attached in obj.connected:
-            try:
-                self.dataobjects[attached].setValue(val,True)
-            except:
-                print "FAILED %s" % attached
-                __import__('traceback').print_exc(file=__import__('sys').stdout)                
-                pass
-
+        obj.sendConnected()
         
         ## return the object for additional updates
         return obj
@@ -110,6 +103,7 @@ class datastore:
                 self.dataobjects[name].lastupdate = obj['lastupdate']
                 self.dataobjects[name].config = obj['config']
                 self.dataobjects[name].connected = obj['connected']
+                self.dataobjects[name].value = obj['value']
             self.debug("%d entries loaded in DATASTORE" % len(self.dataobjects))
             self.DBLOADED = True
         except IOError:
@@ -220,6 +214,7 @@ class dataObject:
         else:
             self.name = name
         
+        ## set Name to function for Scheduler
         if type(self.name) <> unicode:
             ## guess that non unicode is iso8859
             self.name = name.decode("iso-8859-15")
@@ -239,6 +234,8 @@ class dataObject:
         ## connected Logics, communication objects ... goes here
         self.connected = []
 
+    def __repr__(self):
+        return "%s - %s" % (self.id,self.name)
     def _setValue(self,refered_self):
         ## self override 
         ## override with connector send function
@@ -258,6 +255,7 @@ class dataObject:
                 if cycletime < 0.0:
                     cycletime = 0
                 self.cyclestore.append(val)
+                ## FIXME: create global cycling Thread like in cycle.py
                 _cyclethread = self.WG.DATASTORE.attachThread(self,threading.Timer(cycletime,self._cycle))
                 #_cyclethread.setDaemon(1)
                 _cyclethread.start()
@@ -286,6 +284,18 @@ class dataObject:
             self.write_mutex.release()
             self.read_mutex.release()
 
+    def sendConnected(self):
+        self.read_mutex.acquire()
+        val = self.getValue()
+        self.read_mutex.release()
+        for attached in self.connected:
+            try:
+                self.WG.DATASTORE.dataobjects[attached].setValue(val,True)
+            except:
+                print "FAILED %s" % attached
+                __import__('traceback').print_exc(file=__import__('sys').stdout)                
+                pass
+        
 
     def getValue(self):
           try:
