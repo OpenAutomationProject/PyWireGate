@@ -24,7 +24,7 @@ import time
 
 class owfs_connector(Connector):
     CONNECTOR_NAME = 'OWFS Connector'
-    CONNECTOR_VERSION = 0.1
+    CONNECTOR_VERSION = 0.2
     CONNECTOR_LOGNAME = 'owfs_connector'
     def __init__(self,parent, instanceName):
         self._parent = parent
@@ -51,7 +51,7 @@ class owfs_connector(Connector):
         self.issensor = re.compile(r"[0-9][0-9]\x2E[0-9a-fA-F]+")
         self.isbus = re.compile(r"\x2Fbus\x2E([0-9])+$", re.MULTILINE)
         
-        owfsdir = str(connection).split( )[3][1:-17]
+        owfsdir = re.findall("from \x27(.*)\x2F",str(connection))[0]
         ## Sensors and their interfaces 
         self.debug("Read ini file from %s" % owfsdir+"/sensors.ini")
         sensorconfig =  self.WG.readConfig(owfsdir+"/sensors.ini")
@@ -225,19 +225,21 @@ class owfs_connector(Connector):
                     
                 owfspath = "/uncached/%s/%s%s" % (sensor,get,resolution)
                 self.debug("Reading from path %s" % owfspath)
+                data = False
                 try:
                     ## read uncached and put into local-list
                     data = self.owfs.read(owfspath)
-                    try:
-                        self.mutex.acquire()
-                        self.busmaster[busname]['sensors'][sensor][get] = data
-                    finally:
-                        self.mutex.release()
                 except:
                     ## ignore all OWFS Errors
-                    self.WG.errorlog("Reading from path %s failed" % owfspath)                    
+                    #self.WG.errorlog("Reading from path %s failed" % owfspath)                    
+                    self.log("Reading from path %s failed" % owfspath)                    
+
+                try:
+                    self.mutex.acquire()
+                    self.busmaster[busname]['sensors'][sensor][get] = data
+                finally:
+                    self.mutex.release()
                 ## make an id for the sensor (OW:28.043242a32_temperature
-                
                 try:
                     ## only if there is any Data update it in the DATASTORE
                     if self.busmaster[busname]['sensors'][sensor][get]:
