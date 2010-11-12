@@ -152,7 +152,6 @@ class Connection(object):
                 if payload_len >= 0:
                     data = s.recv(payload_len)
                     return self.toNumber(data[:data_len])
-                    break
                 else:
                     # ping response
                     return None
