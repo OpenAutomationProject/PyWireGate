@@ -23,7 +23,7 @@ import signal
 import traceback
 import daemon
 import log 
-
+import re
 
 import ConfigParser
 
@@ -41,7 +41,7 @@ class WireGate(daemon.Daemon):
         self.REDIRECTIO = REDIRECTIO
         
         ## Get the path of this script
-        self.scriptpath = str(datastore).split( )[3][1:-15]
+        self.scriptpath = re.findall("from \x27(.*)\x2F",str(datastore))[0]
 
         self.readWireGateConfig()
 
