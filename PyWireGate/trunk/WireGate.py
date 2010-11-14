@@ -62,7 +62,8 @@ class WireGate(daemon.Daemon):
             'datastore' : "%s/datastore.db" % self.scriptpath,
             'logfile' : "%s/wiregated.log" % self.scriptpath,
             'errorlog' : "%s/wiregated-error.log" % self.scriptpath,
-            'loglevel': 'info'
+            'loglevel': 'info',
+            'defaultencoding': 'UTF-8'
         }
         
         self.checkconfig("WireGate",defaultconfig)
@@ -117,7 +118,6 @@ class WireGate(daemon.Daemon):
 
 
     def run(self):
-        import time
         for configpart in self.config.keys():
             if "connector" in self.config[configpart]:
                 name = configpart
@@ -249,7 +249,7 @@ class WireGate(daemon.Daemon):
         logger.setLevel(level)
         if filename:
             ## python handle logrotating
-            handler = log.logging.handlers.TimedRotatingFileHandler(filename,'MIDNIGHT',encoding='utf-8',backupCount=7)
+            handler = log.logging.handlers.TimedRotatingFileHandler(filename,'MIDNIGHT',encoding=self.WG.config['WireGate']['defaultencoding'],backupCount=7)
             
             ## Handler if logrotate handles Logfiles
             #handler = logging.handlers.WatchedFileHandle(filename)
