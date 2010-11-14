@@ -68,7 +68,7 @@ class datastore:
         self.debug("Updating %s (%s): %r" % (obj.name,id,val))
 
         ## Set the value of the object
-        obj.setValue(val)
+        obj.setValue(val,source=connector)
         
         ##TODO: central subscriber function for other connectore or servers
         
@@ -103,7 +103,7 @@ class datastore:
     def load(self):
         self.debug("load DATASTORE")
         try:
-            db = codecs.open(self.WG.config['WireGate']['datastore'],"rb",encoding='utf-8')
+            db = codecs.open(self.WG.config['WireGate']['datastore'],"r",encoding=self.WG.config['WireGate']['defaultencoding'])
             loaddict = json.load(db)
             db.close()
             for name, obj in loaddict.items():
@@ -120,7 +120,7 @@ class datastore:
         except ValueError:
             ## empty DB File
             self.DBLOADED = True
-            pass
+            raise
         except:
             self.WG.errorlog()
             ## error
@@ -145,7 +145,7 @@ class datastore:
                 'config' : obj.config,
                 'connected' : obj.connected
             }
-        dbfile = codecs.open(self.WG.config['WireGate']['datastore'],"wb",encoding='utf-8')
+        dbfile = codecs.open(self.WG.config['WireGate']['datastore'],"w",encoding=self.WG.config['WireGate']['defaultencoding'])
         utfdb = json.dumps(savedict,dbfile,ensure_ascii=False,sort_keys=True,indent=3)
         dbfile.write(utfdb)
         dbfile.close()
@@ -197,15 +197,13 @@ class dataObject:
         
         ## set Name to function for Scheduler
         if type(self.name) <> unicode:
-            ## guess that non unicode is iso8859
-            self.name = name.decode("iso-8859-15")
+            ## guess that non unicode is default encoded
+            self.name = name.decode(self.WG.config['WireGate']['defaultencoding'])
         ## some defaults
         self.value = None
         self.lastupdate = 0
+        self.lastsource = None
         self.id = id
-        
-        ## Fixme: dpt is only KNX specific , should be moved to self.config['KNX:dptid']
-        self.dptid = -1
         
         ## connector specific vars
         self.config = {}
@@ -217,7 +215,20 @@ class dataObject:
         self.connected = []
 
     def __repr__(self):
+        return json.dumps({
+                'name' : self.name,
+                'id' : self.id,
+                'value' : self.value,
+                'lastupdate' : self.lastupdate,
+                'config' : self.config,
+                'connected' : self.connected
+        })
+
+        
+    def __str__(self):
         return "%s - %s" % (self.id,self.name)
+
+
     def _setValue(self,refered_self):
         ## self override 
         ## override with connector send function
@@ -229,7 +240,7 @@ class dataObject:
             finally:
                 self.write_mutex.release()
 
-    def setValue(self,val,send=False):
+    def setValue(self,val,send=False,source=None):
         if 'sendcycle' in self.config and self.value <> None:
             if not self._cyclejob:
                 self._parent.debug("start Cycle ID: %s" % self.id)
@@ -251,9 +262,9 @@ class dataObject:
                 self._parent.debug("ignore Cycle ID: %s" % self.id)
                 self.cyclestore.append(val)
         else:
-            self._real_setValue(val,send)
+            self._real_setValue(val,send,source=source)
 
-    def _real_setValue(self,val,send):
+    def _real_setValue(self,val,send,source=None):
         try:
             ## get read lock
             self.read_mutex.acquire()
@@ -261,9 +272,10 @@ class dataObject:
             self.write_mutex.acquire()
             ## save the modified time
             self.lastupdate = time.time()
+            self.lastsource = source
             if type(val) == str:
                 self.WG.log("Non Unicode Value received for %s" % self.id,'warning')
-                val = unicode(val,encoding='iso-8859-15',errors='ignore')
+                val = unicode(val,encoding=self.WG.config['WireGate']['defaultencoding'],errors='ignore')
             self.value = val
             if send:
                 self._setValue(self)
@@ -278,18 +290,21 @@ class dataObject:
         self.read_mutex.release()
         for attached in self.connected:
             try:
-                self.WG.DATASTORE.dataobjects[attached].setValue(val,True)
+                self.WG.DATASTORE.dataobjects[attached].setValue(val,True,source=self)
             except:
                 self.WG.log("sendconnected failed for %s" % attached,'error')
-                #__import__('traceback').print_exc(file=__import__('sys').stdout)                
+                __import__('traceback').print_exc(file=__import__('sys').stdout)                
                 
         
 
-    def getValue(self):
+    def getValue(self,other=''):
           try:
               ## get read lock
               self.read_mutex.acquire()
-              return self.value
+              ret = self.value
+              if other == 'lastupdate':
+                  ret = [ret,self.lastupdate]
+              return ret
           finally:
               ## release lock
               self.read_mutex.release()
