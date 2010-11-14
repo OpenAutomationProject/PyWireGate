@@ -70,9 +70,10 @@ class rrd_connector(Connector):
 
     def create(self,dsobj,rrdfilename):
         rrdarchiv = {}
-        rrdconfig = {}
-        if 'rrd' in dsobj.config:
-            rrdconfig = dsobj.config['rrd']
+        if 'rrd' not in dsobj.config:
+            dsobj.config['rrd'] = {}
+        rrdconfig = dsobj.config['rrd']
+        rrdconfig['rrdfilename'] = rrdfilename
         for cfg in ['RRA','ARCHIV','VALTYPE','HEARTBEAT','MIN','MAX']:
             if cfg in rrdconfig:
                 rrdarchiv[cfg] = rrdconfig[cfg]
