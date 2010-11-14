@@ -18,14 +18,15 @@ class rrd_connector(Connector):
         self.WG = parent.WG
         self.instanceName = instanceName
 
-        ## Deafaultconfig
+        ## Defaultconfig
         defaultconfig = {
             'path':self.WG.scriptpath +"/rrd",
             'defaultstep':300,
+            'defaultDS':'value',
             'defaultRRA':'RRA:%s:0.5:1:2160,RRA:%s:0.5:5:2016,RRA:%s:0.5:15:2880,RRA:%s:0.5:180:8760',
             'defaultARCHIV':'AVERAGE,MIN,MAX',
             'defaultVALTYPE':'GAUGE',
-            'defaultHEARTBEAT':600,
+            'defaultHEARTBEAT':900,
             'defaultMIN':'-55',
             'defaultMAX':'255000'
             
@@ -62,23 +63,24 @@ class rrd_connector(Connector):
     def create(self,dsobj,rrdfilename):
         rrdarchiv = {}
         if 'rrd' in dsobj.config:
-            for cfg in ['RRA','ARCHIV','VALTYPE','HEARTBEAT','MIN','MAX']:
+            for cfg in ['DS','RRA','ARCHIV','VALTYPE','HEARTBEAT','MIN','MAX']:
                 if cfg in dsobj.config['rrd']:
                     rrdarchiv[cfg] = dsobj.config['rrd'][cfg]
                 else:
-                    rrdarchiv[cfg] = self.config['default%s' % cfg]
+                    rrdarchiv[cfg] = self.config['default%s' % cfg] # FIXME: das mag nicht
 
+        #FIXME: needed if single DS per rrd?
         args = []
         datasources = [] + dsobj.connected
         if len(datasources) == 0:
             datasources.append(dsobj.id)
 
 
-        for _d in datasources:
-            id = hashlib.md5(_d).hexdigest()[:19]
-            args.append(str("DS:%s:%s:%d:%s:%s" % (id,rrdarchiv['VALTYPE'],rrdarchiv['HEARTBEAT'],str(rrdarchiv['MIN']),str(rrdarchiv['MAX']))))
-        for _a in rrdarchiv['ARCHIV'].split(","):
-            for _r in rrdarchiv['RRA'].split(","):
+#        for _d in datasources:
+#            id = hashlib.md5(_d).hexdigest()[:19]
+        args.append(str("DS:%s:%s:%d:%s:%s" % (rrdarchiv.get('DS',self.config['defaultDS']),rrdarchiv.get('VALTYPE',self.config['defaultVALTYPE']),rrdarchiv.get('HEARTBEAT',self.config['defaultHEARTBEAT']),str(rrdarchiv.get('MIN',self.config['defaultMIN'])),str(rrdarchiv.get('MAX',self.config['defaultMAX'])))))
+        for _a in rrdarchiv.get('ARCHIV',self.config['defaultARCHIV']).split(","):
+            for _r in rrdarchiv.get('RRA',self.config['defaultRRA']).split(","):
                 args.append(str(_r % _a))
 
         startdate = int(time.time()) - 5 * 86400
