@@ -290,7 +290,7 @@ class dataObject:
         self.read_mutex.release()
         for attached in self.connected:
             try:
-                self.WG.DATASTORE.dataobjects[attached].setValue(val,True,source=self)
+                self.WG.DATASTORE.get(attached).setValue(val,True,source=self)
             except:
                 self.WG.log("sendconnected failed for %s" % attached,'error')
                 __import__('traceback').print_exc(file=__import__('sys').stdout)                
