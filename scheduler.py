@@ -44,10 +44,12 @@ class scheduler:
             obj = self.WG.DATASTORE.dataobjects[shed]
             if 'cron' in obj.config:
                 kwargs = {}
+                
+                ## change config from unicode to str
                 for uoption in obj.config['cron'].keys():
                     kwargs[str(uoption)] = str(obj.config['cron'][uoption])
                 
-                self.debug("Adding %s - %r" % (shed,obj))
+                self.debug("Adding %s - %s" % (shed,obj))
                 setattr(obj.sendConnected.im_func,'__name__',"%s" % shed.encode('UTF-8'))
                 self.SCHEDULER.add_cron_job(self.WG.DATASTORE.dataobjects[shed].sendConnected,**kwargs)
 
