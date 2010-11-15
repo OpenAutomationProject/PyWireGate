@@ -229,6 +229,7 @@ class owfs_connector(Connector):
                         'type':sensortype,
                         'cycle':cycle,
                         'nextrun':0,
+                        'present': True,
                         'interfaces': self.supportedsensors[sensortype]['interfaces']
                     }
                 finally:
@@ -251,18 +252,21 @@ class owfs_connector(Connector):
 
 
     def _read(self,busname,sensor):
-        for get in self.sensors[sensor]['interfaces'].keys():
+        for iface in self.sensors[sensor]['interfaces'].keys():
+            if not self.sensors[sensor]['present'] and iface <> "present":
+                ## if not present check only for present
+                continue
             ## make an id for the sensor (OW:28.043242a32_temperature
-            id = "%s:%s_%s" % (self.instanceName,sensor,get)
+            id = "%s:%s_%s" % (self.instanceName,sensor,iface)
             ## get the Datastore Object and look for config
             obj = self.WG.DATASTORE.get(id)
             
             sensortype = self.sensors[sensor]['type']
 
             ## recheck config
-            self.checkConfigDefaults(obj,self.supportedsensors[sensortype]['interfaces'][get])
+            self.checkConfigDefaults(obj,self.supportedsensors[sensortype]['interfaces'][iface])
                 
-            owfspath = "/uncached/%s/%s%s" % (sensor,get,obj.config.get('resolution',''))
+            owfspath = "/uncached/%s/%s%s" % (sensor,iface,obj.config.get('resolution',''))
             self.debug("Reading from path %s" % owfspath)
 
             data = None
@@ -277,6 +281,9 @@ class owfs_connector(Connector):
             if data:
                 self.debug("%s: %r" % (id,data))
                 self.WG.DATASTORE.update(id,data)
+            if iface == "present" and str(data) <> "1":
+                self.sensors[sensor]['present'] = False
+            
         self._addQueue(busname,sensor)
 
     def _addQueue(self,busname,sensor):
@@ -284,7 +291,12 @@ class owfs_connector(Connector):
         self.debug("ADDED %s on %s with %s (%d)s" % (sensor,busname, time.asctime(time.localtime(cycletime)),self.sensors[sensor]['cycle']))
         ## FIXME:  not present iButtons should be added to all Busmaster Queues
         #if self.sensors[sensor]['']
-        self.busmaster[busname]['readQueue'].put((cycletime,sensor))
+        if self.sensors[sensor]['present']:
+            self.busmaster[busname]['readQueue'].put((cycletime,sensor))
+        else:
+            for busmaster in self.busmaster.keys():
+                ## add to all busmaster queues
+                self.busmaster[busmaster]['readQueue'].put((cycletime,sensor))
 
 
     def _readThread(self,busname):
