@@ -172,15 +172,15 @@ class knx_connector(Connector):
 
 
 
-    def send(self,msg,dstaddr):
+    def send(self,msg,dstaddr,flag=KNXWRITEFLAG):
         try:
             addr = self.str2grpaddr(dstaddr)
             if addr:
                 apdu = [0]
                 if type(msg) == int:
-                   apdu.append(KNXWRITEFLAG | msg)
+                   apdu.append(flag | msg)
                 elif type(msg) == list:
-                   apdu = apdu +[KNXWRITEFLAG]+ msg
+                   apdu = apdu +[flag]+ msg
                 else:
                     self.WG.errorlog("invalid Message  %r to %r" % (msg,dstaddr))
                     return 
@@ -189,12 +189,12 @@ class knx_connector(Connector):
         except:
             self.WG.errorlog("Failed send %r to %r" % (msg,dstaddr))
 
-    def setValue(self,dsobj,msg=False):
+    def setValue(self,dsobj,msg=False,flag=KNXWRITEFLAG):
         try:
             if not msg:
                 msg = dsobj.getValue()
             self.debug("SEND %r to %s (%s)" % (msg,dsobj.name,dsobj.id))
-            self.send(self.dpt.encode(msg,dsobj=dsobj),dsobj.id)
+            self.send(self.dpt.encode(msg,dsobj=dsobj),dsobj.id,flag=flag)
         except:
             print "----------- ERROR IN KNX_CONNECTOR.setValue ----------------"
             

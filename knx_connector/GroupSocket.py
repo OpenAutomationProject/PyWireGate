@@ -57,16 +57,21 @@ class groupsocket:
                 ##FIXME: unknown APDU
                 self.debug("unknown APDU from "+msg['srcaddr']+" to "+msg['dstaddr']+ " raw:"+buf)
             else:
+                dsobj = self.WG.DATASTORE.get(id)
                 if (buf[1] & 0xC0 == 0x00):
                     msg['type'] = "read"
+                    if dsobj.config.get('readflag',False):
+                        self.debug("Read from %s" % id)
+                        self._parent.setValue(dsobj,flag=0x40)
+                        
                     ##FIXME: Check (ds) if we should respond
-                elif (buf[1] & 0xC0 == 0x40):
-                    msg['type'] = "response"
-                    ##FIXME: Update ds also?
-                elif (buf[1] & 0xC0 == 0x80):
-                    msg['type'] = "write"
+                elif (buf[1] & 0xC0 == 0x40) or (buf[1] & 0xC0 == 0x80):
+                    if (buf[1] & 0xC0 == 0x40):
+                        msg['type'] = "response"
+                    else:
+                        msg['type'] = "write"
                     ## search Datastoreobject
-                    dsobj = self.WG.DATASTORE.get(id)
+                    
                     ## Decode the DPT Value
                     if (len(buf) >2):
                         msg['value'] = self.dpt.decode( buf[2:],dsobj=dsobj)
@@ -94,7 +99,7 @@ class groupsocket:
 
     def log(self,msg,severity='info',instance=False):
         if not instance:
-            instance = self.instanceName
+            instance = 'KNX'
         self._parent.log(msg,severity,instance)
         
     def debug(self,msg):
