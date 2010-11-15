@@ -57,12 +57,12 @@ class rrd_connector(Connector):
         rrdfilename = self.config['path'] +"/"+ self.makeASCII.sub("_",(str(dsobj.id)))+".rrd"
         if not os.path.exists(rrdfilename):
             self.create(dsobj,rrdfilename)
-        val, utime = dsobj.getValue('lastupdate')
+        val = dsobj.getValue()
         if val == None or type(val) not in (int,float):
             val = "U"
         else:
             val = "%.2f" % val
-        val = "%d:%s" % (utime,val)
+        val = "N:%s" % val
         self.debug("set RRD %s VAL: %r" % (rrdfilename,val))
         rrdtool.update(rrdfilename,val)
             
