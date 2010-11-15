@@ -331,7 +331,7 @@ class dpt_type:
                 now = time.localtime()
             else:
                 now = time.localtime(val)
-            weekday = now[6]
+            weekday = now[6]+1
             hour = now[3]
             min = now[4]
             sec = now[5]
