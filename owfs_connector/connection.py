@@ -122,117 +122,89 @@ class Connection(object):
         """
         """
 
-        #print 'Connection.read("%s")' % (path)
-        
-        rtn = None
-        ## we don't want errors
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try:
-                s.connect((self._server, self._port))
-            except:
-                ##
-                return rtn
+        #print 'Connection.read("%s", %i, "%s")' % (path)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((self._server, self._port))
 
-            smsg = self.pack(OWMsg.read, len(path) + 1, 8192)
-            s.sendall(smsg)
-            s.sendall(path + '\x00')
+        smsg = self.pack(OWMsg.read, len(path) + 1, 8192)
+        s.sendall(smsg)
+        s.sendall(path + '\x00')
 
-            while 1:
-                try:
-                    data = s.recv(24)
-                except:
-                    ##
-                    return rtn
+        while 1:
+            data = s.recv(24)
 
-                payload_len = -1
-                if len(data) is  24:
-                    ret, payload_len, data_len = self.unpack(data)
+            if len(data) is not 24:
+                raise exShortRead
 
-                if payload_len >= 0:
-                    data = s.recv(payload_len)
-                    return self.toNumber(data[:data_len])
-                else:
-                    # ping response
-                    return None
+            ret, payload_len, data_len = self.unpack(data)
 
-        finally:
-            s.close()
-            
+            if payload_len >= 0:
+                data = s.recv(payload_len)
+                rtn = self.toNumber(data[:data_len])
+                break
+            else:
+                # ping response
+                rtn = None
+                break
+
+        s.close()
+        return rtn
 
 
     def write(self, path, value):
         """
         """
-        ret = None
-        try:
-            #print 'Connection.write("%s", "%s")' % (path, str(value))
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try:
-                s.connect((self._server, self._port))
-            except:
-                return ret
 
-            value = str(value)
-            smsg = self.pack(OWMsg.write, len(path) + 1 + len(value) + 1, len(value) + 1)
-            s.sendall(smsg)
-            s.sendall(path + '\x00' + value + '\x00')
+        #print 'Connection.write("%s", "%s")' % (path, str(value))
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((self._server, self._port))
 
-            try:
-                data = s.recv(24)
-            except:
-                return ret
+        value = str(value)
+        smsg = self.pack(OWMsg.write, len(path) + 1 + len(value) + 1, len(value) + 1)
+        s.sendall(smsg)
+        s.sendall(path + '\x00' + value + '\x00')
 
-            if len(data) is 24:
-                ret, payload_len, data_len = self.unpack(data)
-            return ret
+        data = s.recv(24)
 
-            
-        finally:
-            s.close()
-        
+        if len(data) is not 24:
+            raise exShortRead
+
+        ret, payload_len, data_len = self.unpack(data)
+
+        s.close()
+        return ret
 
 
     def dir(self, path):
         """
         """
-        
+
+        #print 'Connection.dir("%s")' % (path)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((self._server, self._port))
+
+        smsg = self.pack(OWMsg.dir, len(path) + 1, 0)
+        s.sendall(smsg)
+        s.sendall(path + '\x00')
+
         fields = []
-        try:
-            #print 'Connection.dir("%s")' % (path)
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            try:
-                s.connect((self._server, self._port))
-            except:
-                return fields
+        while 1:
+            data = s.recv(24)
 
-            smsg = self.pack(OWMsg.dir, len(path) + 1, 0)
-            s.sendall(smsg)
-            s.sendall(path + '\x00')
+            if len(data) is not 24:
+                raise exShortRead
 
-            while 1:
-                try:
-                    data = s.recv(24)
-                except:
-                    return fields
+            ret, payload_len, data_len = self.unpack(data)
 
-                if len(data) is not 24:
-                    return fields
+            if payload_len > 0:
+                data = s.recv(payload_len)
+                fields.append(data[:data_len])
+            else:
+                # end of dir list or 'ping' response
+                break
 
-                ret, payload_len, data_len = self.unpack(data)
-
-                if payload_len > 0:
-                    try:
-                        data = s.recv(payload_len)
-                    except:
-                        return fields
-                    fields.append(data[:data_len])
-                else:
-                    # end of dir list or 'ping' response
-                    return fields
-
-        finally:
-            s.close()
+        s.close()
+        return fields
 
 
     def pack(self, function, payload_len, data_len):
