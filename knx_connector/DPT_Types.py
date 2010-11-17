@@ -143,6 +143,8 @@ class dpt_type:
             instance = "dpt-types"
         if self._parent:
             self._parent.log(msg,severity,instance)
+        else:
+            print msg
 
     def toByteArray(self,val,length):
         ## Set ByteArray
@@ -413,28 +415,16 @@ class dpt_type:
         ## S (Sign) = {0,1}
         ## Exponent = [0 ... 255]
         ## Fraction = [0 .. 8 388 607]
-        val = self.toBigInt(raw)
-        sign = (val & 0x80000000) >> 31
-        exp = (val & 0x7f8000) >> 23
-        mant = val & 0x7fffff
-        if sign <> 0:
-            mant = -(~(mant - 1) & 0x7fffff) 
-        self.debug("DPT14: value: %d sign: %d exp: %d mant: %f" % (val, sign,exp,mant))
-        return (1 << exp) * 0.01 * mant
+        ##use struct as internal the same
+        if len(raw)==4:
+            ret = struct.unpack(">f","".join([chr(i) for i in raw]))
+        if type(ret) == tuple:
+            ret = ret[0]
+        return ret
 
     def encodeDPT14(self,val):
-        sign = 0
-        exp = 0
-        if val < 0:
-            sign = 0x80000000
-        mant = val * 100
-        while mant > 0x7fffff:
-            mant = mant >> 1
-            exp +=1
-        data = sign | (exp << 23) | (int(mant) & 0x07ff)
-        self.debug("DPT14: value: %d sign: %d exp: %d mant: %r" % (val, sign,exp,mant))
-        ## change to 4Byte bytearray 
-        return self.toByteArray(data,4)
+        ## internal the same
+        return  [ord(i) for i in struct.pack(">f",float(val))]
 
     def decodeDPT16(self,raw):
         res = ""
@@ -507,7 +497,9 @@ class dpt_type:
 
 if __name__ == "__main__":
     dpttypes = dpt_type(False)
-    print dpttypes.decode([24,88],dptid=9)
-    print dpttypes.decode([1],dptid=1)
-    print dpttypes.decode([35,76,58],dptid=16)
-    print dpttypes.encode("Das ist",dptid=16)
+    #print dpttypes.decode([24,88],dptid=9)
+    #print dpttypes.decode([1],dptid=1)
+    #print dpttypes.decode([35,76,58],dptid=16)
+    print dpttypes.encode(15.5,dptid=14)
+    print dpttypes.decode([0, 0, 6, 14],dptid=14)
+    print dpttypes.decode([65, 120, 0, 0],dptid=14)
