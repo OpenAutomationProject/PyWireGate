@@ -103,7 +103,7 @@ class datastore:
     def load(self):
         self.debug("load DATASTORE")
         try:
-            db = codecs.open(self.WG.config['WireGate']['datastore'],"r",encoding=self.WG.config['WireGate']['defaultencoding'])
+            db = codecs.open(self.WG.config['WireGate']['datastore'],"r",encoding='UTF-8')
             loaddict = json.load(db)
             db.close()
             for name, obj in loaddict.items():
@@ -145,7 +145,7 @@ class datastore:
                 'config' : obj.config,
                 'connected' : obj.connected
             }
-        dbfile = codecs.open(self.WG.config['WireGate']['datastore'],"w",encoding=self.WG.config['WireGate']['defaultencoding'])
+        dbfile = codecs.open(self.WG.config['WireGate']['datastore'],"w",encoding='UTF-8')
         utfdb = json.dumps(savedict,dbfile,ensure_ascii=False,sort_keys=True,indent=3)
         dbfile.write(utfdb)
         dbfile.close()

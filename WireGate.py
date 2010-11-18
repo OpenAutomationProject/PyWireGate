@@ -63,7 +63,7 @@ class WireGate(daemon.Daemon):
             'logfile' : "%s/wiregated.log" % self.scriptpath,
             'errorlog' : "%s/wiregated-error.log" % self.scriptpath,
             'loglevel': 'info',
-            'defaultencoding': 'UTF-8'
+            'defaultencoding': 'iso-8859-15'
         }
         
         self.checkconfig("WireGate",defaultconfig)
@@ -249,7 +249,7 @@ class WireGate(daemon.Daemon):
         logger.setLevel(level)
         if filename:
             ## python handle logrotating
-            handler = log.logging.handlers.TimedRotatingFileHandler(filename,'MIDNIGHT',encoding=self.WG.config['WireGate']['defaultencoding'],backupCount=7)
+            handler = log.logging.handlers.TimedRotatingFileHandler(filename,'MIDNIGHT',encoding='UTF-8',backupCount=7)
             
             ## Handler if logrotate handles Logfiles
             #handler = logging.handlers.WatchedFileHandle(filename)

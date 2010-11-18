@@ -74,13 +74,13 @@ class lirc_connector(Connector):
             try:
                 raw, counter, button, channel = rawmsg.split()
                 ## default "LIRC:channel_button
-                id = "%s:%s_%s" % (self.instanceName,channel,button)
-                self.WG.DATASTORE.update(id,counter)
+                id = u"%s:%s_%s" % (self.instanceName,channel,button)
+                self.WG.DATASTORE.update(id,int(counter,16))
 
-                id = "%s:%s" % (self.instanceName,button)
+                id = u"%s:%s" % (self.instanceName,button)
                 ## dont't create it "LIRC:Button"
                 if id in self.WG.DATASTORE.dataobjects:
-                    self.WG.DATASTORE.update(id,channel)
+                    self.WG.DATASTORE.update(id,channel.decode(self.WG.config['WireGate']['defaultencoding']))
                 
             except ValueError:
                 self.debug("invalid Data %r" % rawmsg)
