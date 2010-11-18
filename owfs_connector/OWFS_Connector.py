@@ -89,7 +89,7 @@ class owfs_connector(Connector):
                     try:
                         cfg,interface,config = key.split("_",2)
                         self.supportedsensors[sensor]['interfaces'][interface]['config'][config] = sensorconfig[sensor][key]
-                        print self.supportedsensors[sensor]['interfaces'][interface]
+                        self.debug("Interface %s-%s config: %r" % (sensor,interface,self.supportedsensors[sensor]['interfaces'][interface]['config']))
                     except KeyError:
                         pass
                         
@@ -175,7 +175,6 @@ class owfs_connector(Connector):
                             finally:
                                 self.mutex.release()
                             self.findsensors(bus)
-                            self.checkBusCycleTime(bus)
                     except:
                         ## ignore all OWFS Errors
                         pass
@@ -207,36 +206,38 @@ class owfs_connector(Connector):
                     except:
                         ## nothing found
                         pass
-
+                if sensor[:2] == "81":
+                    ## this must be the Busmaster .. threre should only be one
+                    self.busmaster[path]['busmaster'] = sensor
+                
                 if sensortype not in self.supportedsensors:
                     self.debug("unsupported Type: %r" % sensortype)
-                    continue                
-
+                    continue
+                
                 if 'interfaces' not in self.supportedsensors[sensortype]:
                     self.debug("Sensor Type: %r has no supported Interfaces" % sensortype)
                     continue
                 
-                sensorlist = "sensors"
                 cycle = 600
                 if 'cycle' in self.supportedsensors[sensortype]:
                     cycle = self.supportedsensors[sensortype]['cycle']
                 
                 try:
                     self.mutex.acquire()
-                    print "Sensortype: %s config: %r" % (sensortype,self.supportedsensors[sensortype]['interfaces'])
+                    self.debug("Sensortype: %s config: %r" % (sensortype,self.supportedsensors[sensortype]['interfaces']))
                     
                     self.sensors[sensor] = {
                         'type':sensortype,
                         'cycle':cycle,
                         'nextrun':0,
-                        'present': True,
+                        'present': self.busmaster[path].get('busmaster',True),
                         'interfaces': self.supportedsensors[sensortype]['interfaces']
                     }
                 finally:
                     self.mutex.release()
                 
                 self._addQueue(path,sensor)
-                    
+
     def read(self):
         for busname in self.busmaster.keys():
            if not self.busmaster[busname]['readQueue'].empty():
@@ -278,11 +279,15 @@ class owfs_connector(Connector):
                 #self.WG.errorlog("Reading from path %s failed" % owfspath)                    
                 self.log("Reading from path %s failed" % owfspath)                    
 
+            if iface == "present":
+                if str(data) <> "1":
+                    self.sensors[sensor]['present'] = False
+                else:
+                    data = self.busmaster[busname].get('busmaster',True)
+
             if data:
                 self.debug("%s: %r" % (id,data))
                 self.WG.DATASTORE.update(id,data)
-            if iface == "present" and str(data) <> "1":
-                self.sensors[sensor]['present'] = False
             
         self._addQueue(busname,sensor)
 
@@ -294,6 +299,8 @@ class owfs_connector(Connector):
         if self.sensors[sensor]['present']:
             self.busmaster[busname]['readQueue'].put((cycletime,sensor))
         else:
+            if 'present' not in self.sensors[sensor]['interfaces']:
+                return 
             for busmaster in self.busmaster.keys():
                 ## add to all busmaster queues
                 self.busmaster[busmaster]['readQueue'].put((cycletime,sensor))
@@ -306,6 +313,7 @@ class owfs_connector(Connector):
                     if not self.isrunning:
                         break
                     time.sleep(.1)
+                self.debug("Queue for bus %s : %r" % (busname, self.busmaster[busname]['readQueue']))
                 rtime, sensor = self.busmaster[busname]['readQueue'].get()
                 self._read(busname,sensor)
         finally:
@@ -325,7 +333,7 @@ class ReadQueue(Queue):
     # Check whether the queue is empty
     def _empty(self):
         return not self.queue
-
+    
     # Check whether the queue is full
     def _full(self):
         return self.maxsize > 0 and len(self.queue) == self.maxsize
@@ -349,3 +357,6 @@ class ReadQueue(Queue):
         else:
             next = 0
         return (next <= time.time())
+
+    def __repr__(self):
+        return repr(self.queue)
