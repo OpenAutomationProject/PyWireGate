@@ -74,7 +74,7 @@ class lirc_connector(Connector):
             try:
                 raw, counter, button, channel = rawmsg.split()
                 ## default "LIRC:channel_button
-                id = u"%s:%s_%s" % (self.instanceName,channel,button)
+                id = u"%s:%s:%s" % (self.instanceName,channel,button)
                 self.WG.DATASTORE.update(id,int(counter,16))
 
                 id = u"%s:%s" % (self.instanceName,button)
