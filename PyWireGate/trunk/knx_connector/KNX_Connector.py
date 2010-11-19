@@ -61,7 +61,8 @@ class knx_connector(Connector):
         ## Deafaultconfig
         defaultconfig = {
             'url':'ip:127.0.0.1',
-            'parser' : 'groupsocket'
+            'parser' : 'groupsocket',
+            'checktime' : 300
         }
         
         ## check Defaultconfig Options in main configfile
@@ -162,20 +163,17 @@ class knx_connector(Connector):
     def _sendloop(self):
         addr = 0
         msg = []
-        KNX = EIBConnection.EIBConnection()
         try:
-            KNX.EIBSocketURL(self.config['url'])
             while self.isrunning:
                 try:
                     (addr,msg) = self.sendQueue.get(timeout=1)
-                    KNX.EIBSendGroup(addr,msg)
+                    self.KNX.EIBSendGroup(addr,msg)
                 except Empty:
                     pass
                 except:
                     self.WG.errorlog("Failed send %r %r" % (addr,msg))
         finally:
             self._sendThread = None
-            KNX.EIBClose()
 
 
     def send(self,msg,dstaddr,flag=KNXWRITEFLAG):
@@ -237,7 +235,7 @@ class knx_connector(Connector):
                     ## wait 500ms between checks
                     self.idle(.5)
                 ## wait 5 Minutes
-                self.idle(300)
+                self.idle(self.config['checktime'])
         finally:
             self._checkThread = None
             KNX.EIBClose()
