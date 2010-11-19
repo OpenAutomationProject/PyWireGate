@@ -75,7 +75,23 @@ class lirc_connector(Connector):
                 raw, counter, button, channel = rawmsg.split()
                 ## default "LIRC:channel_button
                 id = u"%s:%s:%s" % (self.instanceName,channel,button)
-                self.WG.DATASTORE.update(id,int(counter,16))
+                obj = self.WG.DATASTORE.get(id)
+                val = int(counter,16)
+                if 'toggle' in obj.config:
+                    if counter <> "00":
+                        continue
+                    toggle = obj.config['toggle']
+                    val = obj.getValue()
+                    if type(val) == int:
+                        val = int(val == 0)
+                    else:
+                        val = 0
+                    #if type(obj.config['toggle']) == list:
+                    #    toglen = len(val)
+                    
+
+                    
+                self.WG.DATASTORE.update(id,val)
 
                 id = u"%s:%s" % (self.instanceName,button)
                 ## dont't create it "LIRC:Button"
