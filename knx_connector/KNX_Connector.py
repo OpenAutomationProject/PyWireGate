@@ -46,7 +46,8 @@ class knx_connector(Connector):
         self.KNXSrc = EIBConnection.EIBAddr()
         self.KNXDst = EIBConnection.EIBAddr()
         
-        #self.sendQueue = Queue.PriorityQueue(maxsize=5000)
+        self.DeviceList = {}
+        
         self.sendQueue = KNXSendQueue(maxsize=5000)
         
 
@@ -69,79 +70,79 @@ class knx_connector(Connector):
         ## set local config
         self.config = self.WG.config[self.instanceName]
         
+        self._readThread = None
+        self._sendThread = None
+        self._checkThread = None
+        
         ## Start the Thread
         self.start()
 
     def run(self):
-        self._sendThread = threading.Thread(target=self._sendloop)
-        self._sendThread.setDaemon(True)
-        self._sendThread.start()
         while self.isrunning:
             ## Create Socket
             try:
-                self.KNX.EIBSocketURL(self.config['url'])
-                self.KNX.EIB_Cache_Enable()
-                if self.config['parser'] == "groupsocket":
-                    self.debug("Using Groupsocket parser")
-                    self.KNX.EIBOpen_GroupSocket_async(0)
-                else:
-                    self.debug("Using Busmonitor Parser")
-                    self.KNX.EIBOpenVBusmonitor_async()
-                
                 ## wait a second for the Busmon to activate
-                self.idle(1)
-                self._run()
-                try:
-                    self.KNX.EIBClose()
-                except:
-                    self.WG.errorlog()
+                if self._sendThread == None:
+                    self._sendThread = threading.Thread(target=self._run)
+                    self._sendThread.setDaemon(True)
+                    self._sendThread.start()
+                if self._readThread == None:
+                    self._readThread = threading.Thread(target=self._sendloop)
+                    self._readThread.setDaemon(True)
+                    self._readThread.start()
+                if self._checkThread == None:
+                    self._checkThread = threading.Thread(target=self._healthCheck)
+                    self._checkThread.setDaemon(True)
+                    self._checkThread.start()
+                
+
+                #self._run()
+                #try:
+                #    self.KNX.EIBClose()
+                #except:
+                #    self.WG.errorlog()
             except:
                 self.WG.errorlog()
             if self.isrunning:
-                self.debug("Socket %r Closed waiting 5 sec" % self.config['url'])
                 self.idle(5)
 
     def _shutdown(self):
-        try:
-            self._sendThread.join()
-        except:
-            pass
+        for rthread in [self._checkThread,self._sendThread,self._readThread]:
+            try:
+                rthread.join()
+            except:
+                pass
 
     def _run(self):
-        while self.isrunning:
-            ## Check if we are alive and responde until 10 secs
-            self.WG.watchdog(self.instanceName,10)
-            try:
-                vbusmonin, vbusmonout, vbusmonerr = select.select([self.KNX.EIB_Poll_FD()],[],[],1)
-            except:
-                self.WG.errorlog()
-                break
-            if self.KNX.EIB_Poll_FD() in vbusmonin:
-                iscomplete=0
-                while True:
-                    try:
-                        iscomplete = self.KNX.EIB_Poll_Complete()
-                        ### evtl. fixed das die abgehackten Telegramme
-                        if iscomplete==1:
-                            break
-                    except:
-                        pass
-                if not iscomplete:
-                    ## Eibd closed connection
-                    break
-                if iscomplete==1:
-                    ## capture BusMon packets
-                    if self.config['parser'] == "groupsocket":
-                        self.KNX.EIBGetGroup_Src(self.KNXBuffer,self.KNXSrc,self.KNXDst)
-                        ## Only decode packets larger than 1 octet
-                        if len(self.KNXBuffer.buffer) > 1 :
-                            self.groupsocket.decode(self.KNXBuffer.buffer,self.KNXSrc.data,self.KNXDst.data)
-                    else:
-                        self.KNX.EIBGetBusmonitorPacket(self.KNXBuffer)
-                        ## Only decode packets larger than 7 octets
-                        if len(self.KNXBuffer.buffer) > 7 :
-                            self.busmon.decode(self.KNXBuffer.buffer)
-                
+        try:
+            self.KNX.EIBSocketURL(self.config['url'])
+            self.KNX.EIB_Cache_Enable()
+            if self.config['parser'] == "groupsocket":
+                self.debug("Using Groupsocket parser")
+                self.KNX.EIBOpen_GroupSocket_async(0)
+            else:
+                self.debug("Using Busmonitor Parser")
+                self.KNX.EIBOpenVBusmonitor()
+
+            while self.isrunning:
+                ## Check if we are alive and responde until 10 secs
+                self.WG.watchdog(self.instanceName,10)
+                if self.config['parser'] == "busmonior":
+                    self.KNX.EIBGetBusmonitorPacket(self.KNXBuffer)
+                    ## Only decode packets larger than 7 octets
+                    if len(self.KNXBuffer.buffer) > 7 :
+                        self.busmon.decode(self.KNXBuffer.buffer)
+                else:
+                    self.KNX.EIBGetGroup_Src(self.KNXBuffer,self.KNXSrc,self.KNXDst)
+                    ## Only decode packets larger than 1 octet
+                    if self.KNXSrc.data not in self.DeviceList:
+                        self.DeviceList[self.KNXSrc.data] = self.groupsocket._decodePhysicalAddr(self.KNXSrc.data)
+                    if len(self.KNXBuffer.buffer) > 1 :
+                        self.groupsocket.decode(self.KNXBuffer.buffer,self.KNXSrc.data,self.KNXDst.data)
+        finally:
+            self._readThread = None
+            self.KNX.EIBClose()
+
 
     def str2grpaddr(self,addrstr):
         grpaddr = self.GrpAddrRegex.findall(addrstr)
@@ -161,15 +162,20 @@ class knx_connector(Connector):
     def _sendloop(self):
         addr = 0
         msg = []
-        while self.isrunning:
-            try:
-                (addr,msg) = self.sendQueue.get(timeout=1)
-                self.KNX.EIBSendGroup(addr,msg)
-            except Empty:
-                pass
-            except:
-                self.WG.errorlog("Failed send %r %r" % (addr,msg))
-
+        KNX = EIBConnection.EIBConnection()
+        try:
+            KNX.EIBSocketURL(self.config['url'])
+            while self.isrunning:
+                try:
+                    (addr,msg) = self.sendQueue.get(timeout=1)
+                    KNX.EIBSendGroup(addr,msg)
+                except Empty:
+                    pass
+                except:
+                    self.WG.errorlog("Failed send %r %r" % (addr,msg))
+        finally:
+            self._sendThread = None
+            KNX.EIBClose()
 
 
     def send(self,msg,dstaddr,flag=KNXWRITEFLAG):
@@ -198,6 +204,44 @@ class knx_connector(Connector):
         except:
             print "----------- ERROR IN KNX_CONNECTOR.setValue ----------------"
             
+    def _healthCheck(self):
+        ebuf = EIBConnection.EIBBuffer()
+        KNX = EIBConnection.EIBConnection()
+        self.debug("Starting HealthCheck")
+        try:
+            KNX.EIBSocketURL(self.config['url'])
+            while self.isrunning:
+                self.idle(30)
+                for physaddr, device in self.DeviceList.items():
+                    if not self.isrunning:
+                        break
+                    if physaddr < 4352:
+                        continue
+                    id = "%s:PHY_%s" % (self.instanceName,device)
+                    self.debug("Checking Voltage for %s" % id)
+                    obj = self.WG.DATASTORE.get(id)
+                    if 'ignorecheck' in obj.config:
+                        continue
+                    KNX.EIB_MC_Connect(physaddr)
+                    ## read voltage
+                    ret = KNX.EIB_MC_ReadADC(1,1,ebuf)
+                    try:
+                        if ret > -1:
+                            value = ebuf.data * .15
+                        else:
+                            value = -1
+                        self.WG.DATASTORE.update(id,value)
+                    except:
+                        pass
+                    KNX.EIBReset()
+                    ## wait 500ms between checks
+                    self.idle(.5)
+                ## wait 5 Minutes
+                self.idle(300)
+        finally:
+            self._checkThread = None
+            KNX.EIBClose()
+
 
 class KNXSendQueue(Queue):
     def _init(self, maxsize):
