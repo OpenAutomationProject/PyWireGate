@@ -208,34 +208,37 @@ class knx_connector(Connector):
         self.debug("Starting HealthCheck")
         try:
             KNX.EIBSocketURL(self.config['url'])
+            self.idle(30)
             while self.isrunning:
-                self.idle(30)
-                for physaddr, device in self.DeviceList.items():
-                    if not self.isrunning:
-                        break
-                    if physaddr < 4352:
-                        continue
-                    id = "%s:PHY_%s" % (self.instanceName,device)
-                    self.debug("Checking Voltage for %s" % id)
-                    obj = self.WG.DATASTORE.get(id)
-                    if 'ignorecheck' in obj.config:
-                        continue
-                    KNX.EIB_MC_Connect(physaddr)
-                    ## read voltage
-                    ret = KNX.EIB_MC_ReadADC(1,1,ebuf)
-                    try:
-                        if ret > -1:
-                            value = ebuf.data * .15
-                        else:
-                            value = -1
-                        self.WG.DATASTORE.update(id,value)
-                    except:
-                        pass
-                    KNX.EIBReset()
-                    ## wait 500ms between checks
-                    self.idle(.5)
-                ## wait 5 Minutes
-                self.idle(self.config['checktime'])
+                if self.config['checktime'] >0:
+                    for physaddr, device in self.DeviceList.items():
+                        if not self.isrunning:
+                            break
+                        if physaddr < 4352:
+                            continue
+                        id = "%s:PHY_%s" % (self.instanceName,device)
+                        self.debug("Checking Voltage for %s" % id)
+                        obj = self.WG.DATASTORE.get(id)
+                        if 'ignorecheck' in obj.config:
+                            continue
+                        KNX.EIB_MC_Connect(physaddr)
+                        ## read voltage
+                        ret = KNX.EIB_MC_ReadADC(1,1,ebuf)
+                        try:
+                            if ret > -1:
+                                value = ebuf.data * .15
+                            else:
+                                value = -1
+                            self.WG.DATASTORE.update(id,value)
+                        except:
+                            pass
+                        KNX.EIBReset()
+                        ## wait 1000ms between checks
+                        self.idle(1)
+                    ## wait 5 Minutes
+                    self.idle(self.config['checktime'])
+                else:
+                    self.idle(60)
         finally:
             self._checkThread = None
             KNX.EIBClose()
