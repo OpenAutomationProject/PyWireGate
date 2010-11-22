@@ -21,6 +21,9 @@ import socket
 import select
 import re
 
+
+nearestValue = lambda a,l:min(l,key=lambda x:abs(x-a))
+
 class lirc_connector(Connector):
 
 
@@ -79,6 +82,7 @@ class lirc_connector(Connector):
                 val = int(counter,16)
                 if 'toggle' in obj.config:
                     if counter <> "00":
+                        ## only toggle once
                         continue
                     toggle = obj.config['toggle']
                     val = obj.getValue()
@@ -86,8 +90,16 @@ class lirc_connector(Connector):
                         val = int(val == 0)
                     else:
                         val = 0
-                    #if type(obj.config['toggle']) == list:
-                    #    toglen = len(val)
+                    if type(obj.config['toggle']) == list:
+                        lentoggle = len(obj.config['toggle'])
+                        near = nearestValue(val,obj.config['toggle'])
+                        if near < val:
+                            if val > obj.config['toggle'][-1]:
+                                val = obj.config['toggle'][0]
+                            else:
+                                val = obj.config['toggle'][obj.config['toggle'].index(near)+1]
+                        else:
+                            val = near
                     
 
                     
