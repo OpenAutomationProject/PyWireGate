@@ -1,7 +1,7 @@
 import threading
 import time
 
-class Connector:
+class Connector(object):
     CONNECTOR_NAME = 'unnamed connector'
     CONNECTOR_VERSION = 0.1
     CONNECTOR_LOGNAME = __name__
