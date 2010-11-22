@@ -172,7 +172,10 @@ class dpt_type:
         return int(raw[0]) & 0x1
 
     def encodeDPT1(self,val):
-        return int(val) & 0x1
+        ## if wrong Type send length of the element so that an empty string or list is 0
+        if type(val) in [str,unicode,list]:
+            val = len(val)
+        return int(val <> 0) & 0x1
 
     def decodeDPT2(self,raw):
         ## 2 Bit Control
@@ -497,9 +500,6 @@ class dpt_type:
 
 if __name__ == "__main__":
     dpttypes = dpt_type(False)
-    #print dpttypes.decode([24,88],dptid=9)
-    #print dpttypes.decode([1],dptid=1)
-    #print dpttypes.decode([35,76,58],dptid=16)
     print dpttypes.encode(15.5,dptid=14)
     print dpttypes.decode([0, 0, 6, 14],dptid=14)
     print dpttypes.decode([65, 120, 0, 0],dptid=14)
