@@ -24,6 +24,7 @@ import traceback
 import daemon
 import log 
 import re
+import threading
 
 import ConfigParser
 
@@ -38,6 +39,8 @@ class WireGate(daemon.Daemon):
         self.watchdoglist = {}
         self.connectors = {}
         self.LOGGER = {}
+        self.LoggerCreateLock = threading.RLock()
+        
         self.REDIRECTIO = REDIRECTIO
         
         ## Get the path of this script
@@ -222,15 +225,8 @@ class WireGate(daemon.Daemon):
         
     ## TODO: Check COnfig for seperate Logfiles and min level for logging
     def createLog(self,instance):
-        try:
-            loglevel = self.config[instance]['loglevel']
-        except:
-            loglevel = False
-
-        try:
-            filename = self.config[instance]['logfile']
-        except:
-            filename = False
+        loglevel = self.config[instance].get('loglevel',False)
+        filename = self.config[instance].get('logfile',False)
 
         return self.__createLog(instance,filename=filename,maxlevel=loglevel)
 
@@ -269,10 +265,14 @@ class WireGate(daemon.Daemon):
     ## Logger for all instances that check/create logger based on Configfile
     def log(self,msg,severity="info",instance="WireGate"):
         try:
-            logger = self.LOGGER[instance]
-        except KeyError:
-            logger = self.LOGGER[instance] = self.createLog(instance)
-            pass
+            self.LoggerCreateLock.acquire()
+            try:
+                logger = self.LOGGER[instance]
+            except KeyError:
+                logger = self.LOGGER[instance] = self.createLog(instance)
+                pass
+        finally:
+            self.LoggerCreateLock.release()
         try:
             if severity=="debug":
                 logger.debug(msg)
