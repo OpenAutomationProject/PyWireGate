@@ -51,13 +51,13 @@ class lirc_connector(Connector):
             try:
                 self._socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                 try:
+                    self.debug("Connect to %s:%d" % (self.config['server'],self.config['port']))
                     self._socket.connect((self.config['server'],self.config['port']))
                     self._sockfile = self._socket.makefile()
                     self._run()
                 except socket.error ,e:
                     if e[0] == 111:
-                        print "NO Connection"
-                
+                        self.debug("Connection Reset")
             finally:
                 try:
                     self._socket.close()
@@ -74,6 +74,9 @@ class lirc_connector(Connector):
             if not r:
                 continue
             rawmsg = self._sockfile.readline()
+            if not rawmsg:
+                self.debug("No data connection broken")
+                break
             try:
                 raw, counter, button, channel = rawmsg.split()
                 ## default "LIRC:channel_button
