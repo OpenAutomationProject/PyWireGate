@@ -1,6 +1,7 @@
 import sys
 import time
 import threading
+import re
 
 import codecs
 
@@ -23,7 +24,7 @@ except ImportError:
 
 
 
-class datastore:
+class datastore(object):
     """
         Datastore Instance
     """
@@ -104,7 +105,8 @@ class datastore:
         self.debug("load DATASTORE")
         try:
             db = codecs.open(self.WG.config['WireGate']['datastore'],"r",encoding='UTF-8')
-            loaddict = json.load(db)
+            data = db.read()
+            loaddict = json.loads(data)
             db.close()
             for name, obj in loaddict.items():
                 self.dataobjects[name] = dataObject(self,obj['id'],obj['name'])
@@ -117,10 +119,22 @@ class datastore:
         except IOError:
             ## no DB File
             pass
-        except ValueError:
+        except ValueError,e:
             ## empty DB File
             self.DBLOADED = True
-            raise
+            result = re.findall(r"line\s(\d+)\s", e.message)
+            if result:
+                ## only on json errors not when db is empty
+                lnum = int(result[0])
+                print "Can't load Datastore"
+                data = data.split("\n")
+                lines = data[lnum -10:lnum +10]
+                for line in range(lnum-10,lnum+10):
+                    if line == lnum-1:
+                        print "--" + data[line]
+                    else:
+                        print "##" + data[line]
+                sys.exit(1)
         except:
             self.WG.errorlog()
             ## error
@@ -172,7 +186,7 @@ class datastore:
         self.WG.log(msg,severity,"datastore")
 
 
-class dataObject:
+class dataObject(object):
     def __init__(self,parent,id,name=False):
         self._parent = parent
         self.WG = parent.WG
