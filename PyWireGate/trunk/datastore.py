@@ -100,6 +100,8 @@ class datastore(object):
         self.locked.release()
         return self.dataobjects[id]
 
+    def namespaceRead(self,namespace):
+        return filter(lambda x,y=namespace: x.namespace == y,self.dataobjects.values())
 
     def load(self):
         self.debug("load DATASTORE")
@@ -200,7 +202,7 @@ class dataObject(object):
             namespace = namespace[0]
         else:
             ## Fixme: maybe default Namespace
-            namespace = ""
+            namespace = "UNKNOWN"
         self.namespace = namespace    
 
         if not name:
@@ -249,7 +251,7 @@ class dataObject(object):
         if self.namespace:
             try:
                 self.write_mutex.acquire()
-                self._setValue = self.WG.connectors[self.namespace].setValue
+                #self._setValue = self.WG.connectors[self.namespace].setValue
                 self.WG.connectors[self.namespace].setValue(refered_self)
             finally:
                 self.write_mutex.release()

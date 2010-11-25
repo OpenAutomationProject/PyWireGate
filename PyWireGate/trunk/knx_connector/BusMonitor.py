@@ -271,7 +271,7 @@ class busmonitor:
 
     def log(self,msg,severity='info',instance=False):
         if not instance:
-            instance = self.instanceName
+            instance = 'KNX'
         self._parent.log(msg,severity,instance)
 
         
