@@ -183,6 +183,10 @@ class WireGate(daemon.Daemon):
         for obj in self.watchdoglist.keys():
             if time.time() > self.watchdoglist[obj]:
                     self.log("\n\nInstanz %s reagiert nicht\n\n" % obj,'error')
+                    try:
+                        self.connectors[obj].shutdown()
+                    except:
+                        pass
                     del self.watchdoglist[obj]
     
     ## set Watchdog

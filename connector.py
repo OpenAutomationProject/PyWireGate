@@ -15,7 +15,7 @@ class Connector(object):
     def start(self):
         self.log("%s (%s) starting up" % (self.CONNECTOR_NAME, self.instanceName) ,'info','WireGate')
         self.isrunning=True
-        self._thread = threading.Thread(target=self.run,name=__name__)
+        self._thread = threading.Thread(target=self.run,name="%s_main" % self.instanceName)
         self._thread.setDaemon(1)
         self._thread.start()
 
@@ -32,7 +32,8 @@ class Connector(object):
         self.isrunning=False
         if hasattr(self,'_shutdown'):
             self._shutdown()
-        self._thread.join(2)
+        if self._thread.isALive():
+            self._thread.join(2)
         if self._thread.isAlive():
             self.log("Shutdown Failed",'critical')
 

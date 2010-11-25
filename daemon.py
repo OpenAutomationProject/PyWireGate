@@ -13,7 +13,7 @@ except StandardError, e:
     print e
     sys.exit()
 
-class Daemon:
+class Daemon(object):
     """
     A generic daemon class.
 
