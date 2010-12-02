@@ -55,7 +55,7 @@ class groupsocket:
             id = "%s:%s" % (self._parent.instanceName, msg['dstaddr'])
             if (buf[0] & 0x3 or (buf[1] & 0xC0) == 0xC0):
                 ##FIXME: unknown APDU
-                self.debug("unknown APDU from "+msg['srcaddr']+" to "+msg['dstaddr']+ " raw:"+buf)
+                self.debug("unknown APDU from %r to %r raw: %r" %(msg['srcaddr'] ,msg['dstaddr'],buf))
             else:
                 dsobj = self.WG.DATASTORE.get(id)
                 if (buf[1] & 0xC0 == 0x00):
