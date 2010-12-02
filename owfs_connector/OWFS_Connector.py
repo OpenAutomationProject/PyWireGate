@@ -27,8 +27,6 @@ import heapq
 
 
 class owfs_connector(Connector):
-
-
     CONNECTOR_NAME = 'OWFS Connector'
     CONNECTOR_VERSION = 0.2
     CONNECTOR_LOGNAME = 'owfs_connector'
@@ -40,10 +38,11 @@ class owfs_connector(Connector):
         self.mutex = threading.RLock()
         
         defaultconfig = {
-            'cycletime' : 600,
+            'cycletime' : 60,
             'server' : '127.0.0.1',
             'port' : 4304
         }
+        
         self.WG.checkconfig(self.instanceName,defaultconfig)
         self.config = self.WG.config[instanceName]
         
@@ -52,7 +51,7 @@ class owfs_connector(Connector):
         
         ## some regex for identifying Sensors and busses
         self.issensor = re.compile(r"[0-9][0-9]\x2E[0-9a-fA-F]+")
-        self.isbus = re.compile(r"\x2Fbus\x2E([0-9])+$", re.MULTILINE)
+        self.isbus = re.compile(r"\x2Fbus\x2E([0-9]+)$", re.MULTILINE)
         
         owfsdir = re.findall("from \x27(.*)\x2F",str(connection))[0]
         ## Sensors and their interfaces 
@@ -100,6 +99,7 @@ class owfs_connector(Connector):
         self.sensors = {}
         self.start()
 
+
     def checkConfigDefaults(self,obj,default):
         try:
             for cfg in default['config'].keys():
@@ -136,13 +136,14 @@ class owfs_connector(Connector):
             
             ## IDLE for cycletime seconds (default 15sec)
             ## Fixme: maybe optimize cycletime dynamic based on busload
-            self.idle(.1)
+            self.idle(5)
+    
+    def _shutdown(self):
         for busname in self.busmaster.keys():
             if self.busmaster[busname]['readthread'] <> None:
-                self.busmaster[busname]['readthread'].join()
+                if self.busmaster[busname]['readthread'].isAlive():
+                    self.busmaster[busname]['readthread'].join()
             
-
-
 
     def findbusmaster(self,path=""):
         ## search for active busses
@@ -208,7 +209,11 @@ class owfs_connector(Connector):
                         pass
                 if sensor[:2] == "81":
                     ## this must be the Busmaster .. threre should only be one
-                    self.busmaster[path]['busmaster'] = sensor
+                    try:
+                        self.mutex.acquire()
+                        self.busmaster[path]['busmaster'] = sensor.decode('ISO-8859-15')
+                    finally:
+                        self.mutex.release()
                 
                 if sensortype not in self.supportedsensors:
                     self.debug("unsupported Type: %r" % sensortype)
@@ -230,7 +235,7 @@ class owfs_connector(Connector):
                         'type':sensortype,
                         'cycle':cycle,
                         'nextrun':0,
-                        'present': self.busmaster[path].get('busmaster',True),
+                        'present': self.busmaster[path].get('busmaster',u'unknown'),
                         'interfaces': self.supportedsensors[sensortype]['interfaces']
                     }
                 finally:
@@ -240,22 +245,29 @@ class owfs_connector(Connector):
 
     def read(self):
         for busname in self.busmaster.keys():
-           if not self.busmaster[busname]['readQueue'].empty():
-              if not self.busmaster[busname]['readthread']:
-                  self.debug("Start read Thread for %s" % busname)
-                  threadname = "OWFS-Reader_%s" % busname
-                  try:
-                      self.mutex.acquire()
-                      self.busmaster[busname]['readthread'] = threading.Thread(target=self._readThread,args=[busname],name=threadname)
-                      self.busmaster[busname]['readthread'].start()
-                  finally:
-                      self.mutex.release()
+            if not self.isrunning:
+                break
+            if not self.busmaster[busname]['readQueue'].empty():
+                if self.busmaster[busname]['readthread'] == None:
+                    self.debug("Start read Thread for %s" % busname)
+                    threadname = "OWFS-Reader_%s" % busname
+                    try:
+                        self.mutex.acquire()
+                        self.busmaster[busname]['readthread'] = threading.Thread(target=self._readThread,args=[busname],name=threadname)
+                        self.busmaster[busname]['readthread'].start()
+                    finally:
+                        self.mutex.release()
+            else:
+                self.debug("Bus %r has empty Queue %r" % (busname,self.busmaster[busname]))
 
 
     def _read(self,busname,sensor):
         for iface in self.sensors[sensor]['interfaces'].keys():
+            if not self.isrunning:
+                break
             if not self.sensors[sensor]['present'] and iface <> "present":
                 ## if not present check only for present
+                self.debug("Ignore not present sensor %s on bus %s" % (sensor,busname))
                 continue
             ## make an id for the sensor (OW:28.043242a32_temperature
             id = "%s:%s_%s" % (self.instanceName,sensor,iface)
@@ -281,9 +293,27 @@ class owfs_connector(Connector):
 
             if iface == "present":
                 if str(data) <> "1":
-                    self.sensors[sensor]['present'] = False
+                    try:
+                        self.mutex.acquire()
+                        self.sensors[sensor]['present'] = False
+                    finally:
+                        self.mutex.release()
+                    data = u""
                 else:
-                    data = self.busmaster[busname].get('busmaster',True)
+                    try:
+                        self.mutex.acquire()
+                        self.sensors[sensor]['present'] = busname
+                        data = self.busmaster[busname]['busmaster']
+                    finally:
+                        self.mutex.release()
+                    
+                    nowval = self.WG.DATASTORE.get(id).getValue()
+                    if nowval == data:
+                        self.debug("DONT UPDATE")
+                        ## dont update
+                        continue
+                    else:
+                        print "DATA %r == %r" % (data,nowval)
 
             if data:
                 self.debug("%s: %r" % (id,data))
@@ -292,18 +322,20 @@ class owfs_connector(Connector):
         self._addQueue(busname,sensor)
 
     def _addQueue(self,busname,sensor):
+        if not self.isrunning:
+            return
         cycletime = time.time() +self.sensors[sensor]['cycle']
         self.debug("ADDED %s on %s with %s (%d)s" % (sensor,busname, time.asctime(time.localtime(cycletime)),self.sensors[sensor]['cycle']))
-        ## FIXME:  not present iButtons should be added to all Busmaster Queues
-        #if self.sensors[sensor]['']
         if self.sensors[sensor]['present']:
             self.busmaster[busname]['readQueue'].put((cycletime,sensor))
         else:
             if 'present' not in self.sensors[sensor]['interfaces']:
+                self.debug("RETURN no present interface %s" % sensor)
                 return 
             for busmaster in self.busmaster.keys():
                 ## add to all busmaster queues
                 self.busmaster[busmaster]['readQueue'].put((cycletime,sensor))
+        print "QUEUES %r: %r" % (busname,self.busmaster[busname]['readQueue'])
 
 
     def _readThread(self,busname):
@@ -311,7 +343,7 @@ class owfs_connector(Connector):
             while self.isrunning:
                 while not self.busmaster[busname]['readQueue'].check():
                     if not self.isrunning:
-                        break
+                        return
                     time.sleep(.1)
                 self.debug("Queue for bus %s : %r" % (busname, self.busmaster[busname]['readQueue']))
                 rtime, sensor = self.busmaster[busname]['readQueue'].get()
@@ -349,9 +381,11 @@ class ReadQueue(Queue):
         return heapq.heappop(self.queue)
         
     def check(self):
+        self.mutex.acquire()
         if len(self.queue) == 0:
             return False
         next = min(self.queue)
+        self.mutex.release()
         if len(next)==2:
             next = next[0]
         else:

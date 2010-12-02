@@ -26,8 +26,6 @@ http://www.owfs.org
 """
 
 
-import sys
-import os
 import socket
 import struct
 import re

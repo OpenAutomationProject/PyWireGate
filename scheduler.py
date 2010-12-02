@@ -26,7 +26,7 @@ except ImportError:
 
 
 
-class scheduler:
+class scheduler(object):
     def __init__(self,parent):
         self._parent = parent
         if parent:
@@ -67,8 +67,15 @@ class scheduler:
         
         
 if __name__ == '__main__':
-    s = scheduler(False)
-    time.sleep(155)
+    s = apscheduler()
+    s.start()
+    import time
+    def test():
+        print "TIME: %s" % time.asctime()
+    test()
+    s.add_cron_job(test,minute='*/3',second='0')
+    while True:
+        pass
     s.shutdown()
     
     

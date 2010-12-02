@@ -211,14 +211,14 @@ class dpt_type:
             val = val.encode('iso-8859-15')
         if type(val) <> str:
             val = "%r" % val
-        return ord(val[0]) & 0xff
+        return [ord(val[0]) & 0xff]
     
     def decodeDPT5(self,raw):
         ## 1 Byte unsigned
         return int(raw[0]) & 0xff
 
     def encodeDPT5(self,val):
-        return int(val) & 0xff
+        return [int(val) & 0xff]
 
     def decodeDPT501(self,raw):
         ## 1 Byte unsigned percent
@@ -226,7 +226,9 @@ class dpt_type:
         return (int(raw[0]) & 0xff) * 100 / 255
 
     def encodeDPT501(self,val):
-        return (int(val) * 255 / 100 ) & 0xff
+        if val > 100:
+            val = 100
+        return [(int(val) * 255 / 100 ) & 0xff]
     
     def decodeDPT6(self,raw):
         ## 1 Byte signed
@@ -237,7 +239,7 @@ class dpt_type:
         if val > 127:
             ## Max
             val = 127
-        return int(val) & 0xff
+        return [int(val) & 0xff]
         
     def decodeDPT7(self,raw):
         ## 2 byte unsigned

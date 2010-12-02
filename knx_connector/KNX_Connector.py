@@ -71,7 +71,7 @@ class knx_connector(Connector):
         defaultconfig = {
             'url':'ip:127.0.0.1',
             'parser' : 'groupsocket',
-            'checktime' : 300
+            'checktime' : 0
         }
         
         ## check Defaultconfig Options in main configfile
