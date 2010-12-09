@@ -280,7 +280,7 @@ class dpt_type:
         if val < 0:
             sign = 0x8000
         mant = val * 100
-        while mant > 0x07ff:
+        while (mant > 2047) or (mant < -2048):
             mant = mant >> 1
             exp +=1
         data = sign | (exp << 11) | (int(mant) & 0x07ff)
