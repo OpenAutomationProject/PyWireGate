@@ -1,0 +1,64 @@
+html, body {
+  font-family: Arial, sans-serif;
+  font-size: 10pt;
+  background: #EEE;
+  height:100%;width:100%; 
+  margin:0;padding:0;overflow: hidden;
+}
+}
+
+h1 {
+  font-size: 16pt;
+}
+
+h2 {
+  font-size: 12pt;
+}
+
+.libName {
+  font-size: 11pt;
+  font-weight: bold;
+  margin-top: 1em;
+}
+
+.ne-resize, .nw-resize, .se-resize, .sw-resize {
+  display: none;
+}
+
+.selected .ne-resize, .selected .nw-resize, .selected .se-resize, .selected .sw-resize {
+  display: inline;
+}
+
+.ne-resize {
+  cursor: ne-resize;
+}
+
+.nw-resize {
+  cursor: nw-resize;
+}
+
+.se-resize {
+  cursor: se-resize;
+}
+
+.sw-resize {
+  cursor: sw-resize;
+}
+
+.ui-layout-pane { /* all 'panes' */ 
+  border: 1px solid #BBB; 
+  overflow: auto;
+} 
+
+.ui-layout-resizer { /* all 'resizer-bars' */ 
+  background: #DDD; 
+} 
+
+.ui-layout-toggler { /* all 'toggler-buttons' */ 
+  background: #AAA; 
+}
+
+#editorX {
+  height: 100%;
+  width: 100%;
+}
