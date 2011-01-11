@@ -104,6 +104,10 @@ function Block( type, svg, interactive )
       canvas.rect( body, 0, 0, width, height, style );
     }
     
+    // extend the style for the ports...
+    style.cursor = 'crosshair';
+    style.fill = style.stroke;
+    
     // Draw the inports
     var inPortsLength  = inPorts.length;
     $.each( inPorts, function(i){
@@ -111,7 +115,7 @@ function Block( type, svg, interactive )
       if( 'connection' in this )
         canvas.line( g, 0, y, 6, y, style );
       else
-        editorConnectionPointCreate( canvas.polyline( g, [[1, y-4],[6, y],[1, y+4]] ), 'inPort', i );
+        editorConnectionPointCreate( canvas.polyline( g, [[1, y-4],[6, y],[1, y+4]], style ), 'inPort', i );
       if( maskOptions.showLabel )
         canvas.text( g, 10, y, this.name, {'dominant-baseline':'middle','text-anchor':'start'} );
     });
@@ -123,7 +127,7 @@ function Block( type, svg, interactive )
       if( 'connection' in this )
         canvas.line( g, width+6, y, width+12, y, style );
       else
-        editorConnectionPointCreate( canvas.polyline( g, [[width+6, y-4],[width+11, y],[width+6, y+4]] ), 'outPort', i );
+        editorConnectionPointCreate( canvas.polyline( g, [[width+6, y-4],[width+11, y],[width+6, y+4]], style ), 'outPort', i );
       if( maskOptions.showLabel )
         canvas.text( g, width, y, this.name, {'dominant-baseline':'middle','text-anchor':'end'} );
     });
