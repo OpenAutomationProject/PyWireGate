@@ -222,7 +222,8 @@ function Block( type, svg, interactive )
     }
     
     $.each( inPorts, function(i){
-      if( 'connection' in this )
+      //if( 'connection' in this )
+      if( this.connection !== undefined )
       {
         this.connection.lastMove( that.inPortPos( i ), true );
       }
