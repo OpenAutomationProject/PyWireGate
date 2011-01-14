@@ -181,12 +181,23 @@ function Connection( JSON, svg, interactive )
   
   this.firstMove = function( pos )
   {
-    if( paths[0].path[0][1] == paths[0].path[1][1] ) // keep horizontal line
+    if( Math.abs( paths[0].path[0][1] - paths[0].path[1][1] ) < 1.0 ) // keep horizontal line
     {
       paths[0].path[0] = pos;
       paths[0].path[1][1] = pos[1];
     } else {
       paths[0].path[0] = pos;
+    }
+    // remove obsolete points if the are the same now
+    if( paths[0].path.length > 3                                    &&
+        Math.abs( paths[0].path[1][0] - paths[0].path[2][0] ) < 1.0 &&
+        Math.abs( paths[0].path[1][1] - paths[0].path[2][1] ) < 1.0 )
+    {
+      console.log( 'firstMove', paths[0].path.length );
+      lastFixed -= 2;
+      paths[0].path.shift(); // remove front
+      paths[0].path.shift(); // remove first identical
+      paths[0].path[0] = pos; // remove second identical by setting it to the first
     }
     draw();
   }
