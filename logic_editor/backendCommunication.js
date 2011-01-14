@@ -54,6 +54,34 @@
       ],
       'outPorts': [],
       'parameters':{}
+    },
+    'sink2': {
+      'width': 100,
+      'height': 100,
+      'rotation': 0,
+      'flip': false,
+      'color': [0.0, 0.0, 0.0],
+      'background': [1.0, 1.0, 1.0],
+      'inPorts': [
+      { 
+        'name': 'in',
+        'type': 'event'
+      },
+      { 
+        'name': 'in',
+        'type': 'event'
+      },
+      { 
+        'name': 'in',
+        'type': 'event'
+      },
+      { 
+        'name': 'in',
+        'type': 'event'
+      }
+      ],
+      'outPorts': [],
+      'parameters':{}
     }
   },
   'mathLib': {
