@@ -19,6 +19,7 @@
 
 // global variables
 var overPort = false;
+var connectionLookingForInPort = true; // only relevant in connection drawing mode
 var maxX = 500; // the biggest x value of the current view
 var maxY = 0; // the biggest y value of the current view
 

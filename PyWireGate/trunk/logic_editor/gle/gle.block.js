@@ -103,6 +103,7 @@ function Block( type, svg, interactive )
     } else {
       canvas.rect( body, 0, 0, width, height, style );
     }
+    if( addEvent ) editorConnectionPointCreate( body, undefined, undefined );
     
     // extend the style for the ports...
     style.cursor = 'crosshair';
@@ -297,10 +298,13 @@ function Block( type, svg, interactive )
   ////////////////
   function editorConnectionPointCreate( obj, portType, portNumber )
   {
-    $(obj).bind( 'mousedown', {
-      portType  :portType,
-      portNumber:portNumber
-    }, editorConnectionPointDrag );
+    if( portType !== undefined && portNumber !== undefined )
+    {
+      $(obj).bind( 'mousedown', {
+        portType  :portType,
+        portNumber:portNumber
+      }, editorConnectionPointDrag );
+    }
     $(obj).bind( 'mouseover', {
       portType  :portType,
       portNumber:portNumber
@@ -352,11 +356,42 @@ function Block( type, svg, interactive )
   function editorConnectionPointOverPort( event )
   {
     console.log( 'eCPOP', event.data.portType );
-    overPort = { 
-      block : that,
-      type  : event.data.portType,
-      number: event.data.portNumber
-    };
+    if( event.data.portType !== undefined && event.data.portNumber !== undefined )
+    {
+      overPort = { 
+        block : that,
+        type  : event.data.portType,
+        number: event.data.portNumber
+      };
+    } else {
+      var ex = event.pageX - $('#editor')[0].offsetLeft;
+      var ey = event.pageY - $('#editor')[0].offsetTop;
+      var distance = function( pos )
+      {
+        return (ex-pos[0])*(ex-pos[0]) + (ey-pos[1])*(ey-pos[1]);
+      }
+      if( connectionLookingForInPort )
+      {
+        var smallestDistance = 1e99;
+        var smallestDistancePort = -1;
+        for( var i = 0; i < inPorts.length; i++ )
+        {
+          var dist = distance( that.inPortPos(i) );
+          if( dist < smallestDistance )
+          {
+            smallestDistance = dist;
+            smallestDistancePort = i;
+          }
+        }
+        overPort = { 
+          block : that,
+          type  : 'inPort',
+          number: smallestDistancePort
+        };
+      } else {
+        // FIXME ADD outPort
+      }
+    }
   }
   
   function editorConnectionPointOverPortOut( event )

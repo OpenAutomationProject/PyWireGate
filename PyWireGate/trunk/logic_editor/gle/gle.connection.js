@@ -130,7 +130,7 @@ function Connection( JSON, svg, interactive )
   function editorDragMouseMove( event )
   {
     var ed   = event.data;
-    console.log('cDMM', ed );
+    //console.log('cDMM', ed );
     if( ed.extend )
     {
       that.lastMove( [ed.origx - ed.startx + event.pageX, ed.origy - ed.starty + event.pageY], false );
@@ -139,30 +139,6 @@ function Connection( JSON, svg, interactive )
       paths[ed.obj[1]].path[ed.obj[2]][1] = ed.origy - ed.starty + event.pageY;
       draw();
     }
-        /*
-    if( 'move' == event.data.type )
-    {
-      relocate(); // shortcut
-    } else {
-      if( width  < 10 ) width  = 10; // sanity...
-      if( height < 10 ) height = 10; // sanity...
-      draw();
-    }
-    
-    $.each( inPorts, function(i){
-      if( 'connection' in this )
-      {
-        this.connection.lastMove( that.inPortPos( i ), true );
-      }
-    });
-    
-    $.each( outPorts, function(i){
-      if( 'connection' in this )
-      {
-        this.connection.firstMove( that.outPortPos( i ) );
-      }
-    });
-    */
   }
   
   function editorDragMouseUp( event )
