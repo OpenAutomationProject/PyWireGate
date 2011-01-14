@@ -40,6 +40,7 @@ function Connection( JSON, svg, interactive )
   
   var canvas   = svg         || $('#editor').svg('get');
   var addEvent = interactive !== undefined ? interactive : true;
+  var inEdit   = false;
   var g = undefined; // link to the representation of the block in the DOM
   
   // the private functions
@@ -70,7 +71,113 @@ function Connection( JSON, svg, interactive )
         parameter['stroke-dasharray'] = 'none';
       var x = canvas.polyline( g, paths[i].path, parameter );
     }
+    
+    // shotcut
+    function connectionDrag( obj, handle )
+    {
+      $(handle).bind( 'mousedown', {obj:obj}, connectionDragMouseDown );
+    }
+    
+    // Draw the handles
+    for( var i in paths )
+    {
+      for( var j in paths[i].path )
+      {
+        var x = paths[i].path[j][0];
+        var y = paths[i].path[j][1];
+        var style = '';
+        if( j == 0 || j == paths[i].path.length-1 ) style  = 'opacity:0;';
+        if( inEdit && j == paths[i].path.length-1 ) style += 'display:none';
+        connectionDrag( [g,i,j], canvas.rect( g, x-outset, y-outset, 1+inset+outset, 1+inset+outset, {class:'move',style:style} ) ); 
+      }
+    }
+    
   }
+  
+  function connectionDragMouseDown( event )
+  {
+    console.log( 'cDMD', event );
+    var classList = this.getAttribute('class').split(' ');
+    console.log( 'cDMD', classList );
+    console.log( 'cDMD', event.data.obj );
+      
+    var path = paths[ event.data.obj[1] ].path;
+    var extend = event.data.obj[2] == path.length - 1
+    var parameter = {
+      obj    : event.data.obj,
+      origx  : path[ event.data.obj[2] ][0],
+      origy  : path[ event.data.obj[2] ][1],
+      extend : extend,
+      startx : event.pageX, 
+      starty : event.pageY
+    };
+    
+    lastFixed = path.length - 1;
+    
+    /*
+    if( extend )
+    {
+      this.style.display = 'none';
+    }
+    */
+    inEdit = true;
+    
+    $(document).bind( 'mousemove', parameter, editorDragMouseMove );
+    $(document).bind( 'mouseup'  ,            editorDragMouseUp   );
+    return false;
+  }
+  
+  function editorDragMouseMove( event )
+  {
+    var ed   = event.data;
+    console.log('cDMM', ed );
+    if( ed.extend )
+    {
+      that.lastMove( [ed.origx - ed.startx + event.pageX, ed.origy - ed.starty + event.pageY], false );
+    } else {
+      paths[ed.obj[1]].path[ed.obj[2]][0] = ed.origx - ed.startx + event.pageX;
+      paths[ed.obj[1]].path[ed.obj[2]][1] = ed.origy - ed.starty + event.pageY;
+      draw();
+    }
+        /*
+    if( 'move' == event.data.type )
+    {
+      relocate(); // shortcut
+    } else {
+      if( width  < 10 ) width  = 10; // sanity...
+      if( height < 10 ) height = 10; // sanity...
+      draw();
+    }
+    
+    $.each( inPorts, function(i){
+      if( 'connection' in this )
+      {
+        this.connection.lastMove( that.inPortPos( i ), true );
+      }
+    });
+    
+    $.each( outPorts, function(i){
+      if( 'connection' in this )
+      {
+        this.connection.firstMove( that.outPortPos( i ) );
+      }
+    });
+    */
+  }
+  
+  function editorDragMouseUp( event )
+  {
+    $(document).unbind( 'mousemove', editorDragMouseMove );
+    $(document).unbind( 'mouseup'  , editorDragMouseUp   );
+    inEdit = false;
+      var target = that.lastTarget();
+      if( target )
+      {
+        target.block.setConnection( target.type, target.number, that ); //event.data.con );
+      }
+    draw();
+  }
+  
   
   this.firstMove = function( pos )
   {
