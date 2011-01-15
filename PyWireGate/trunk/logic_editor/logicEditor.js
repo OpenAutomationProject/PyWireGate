@@ -160,7 +160,7 @@ function editorSelect( element )
 }
 
 jQuery(document).ready(function(){
-  var getCoordinate = (function()
+  getCoordinate = (function()
   {
     var svg = $('#editor svg'); // quasi static variable
     return function( event ) {
