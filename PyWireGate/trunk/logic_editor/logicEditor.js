@@ -158,3 +158,14 @@ function editorSelect( element )
   });
   element.setAttribute( 'class', element.getAttribute( 'class' ) + ' selected' );
 }
+
+jQuery(document).ready(function(){
+  var getCoordinate = (function()
+  {
+    var svg = $('#editor svg'); // quasi static variable
+    return function( event ) {
+      var o = svg.offset();
+      return {x: event.pageX - o.left, y: event.pageY - o.top};
+    };
+  })();
+});
