@@ -64,6 +64,10 @@ h2 {
   cursor: sw-resize;
 }
 
+.hiddenHandle {
+  opacity: 0;
+}
+
 .ui-layout-pane { /* all 'panes' */ 
   border: 1px solid #BBB; 
   overflow: auto;
