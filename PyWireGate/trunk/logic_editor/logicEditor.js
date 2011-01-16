@@ -143,11 +143,9 @@ function editorDrop( event, ui )
 {
   if( ui.draggable.data('element') )
   {
-    var svg = $('#editor').svg('get');
-    var x = ui.position.left - this.offsetLeft;
-    var y = ui.position.top  - this.offsetTop ;
-    var data = $.extend( true, {x:x, y:y}, ui.draggable.data('element') );
-    drawElement( svg, data );
+    var c = getCoordinate( {pageX: ui.position.left, pageY: ui.position.top} );
+    var data = $.extend( true, c, ui.draggable.data('element') );
+    drawElement( $('#editor').svg('get'), data );
   }
 }
 
@@ -162,10 +160,11 @@ function editorSelect( element )
 jQuery(document).ready(function(){
   getCoordinate = (function()
   {
-    var svg = $('#editor svg'); // quasi static variable
+    var editor = $('#editor');  // quasi static variable
     return function( event ) {
-      var o = svg.offset();
-      return {x: event.pageX - o.left, y: event.pageY - o.top};
+      var o = editor.offset();
+      return {x: event.pageX - o.left + editor.scrollLeft(),
+              y: event.pageY - o.top  + editor.scrollTop () };
     };
   })();
 });
