@@ -146,7 +146,7 @@ function editorDrop( event, ui )
     var c = getCoordinate( {pageX: ui.position.left, pageY: ui.position.top} );
     var data = $.extend( true, c, ui.draggable.data('element') );
     drawElement( $('#editor').svg('get'), data );
-    editorResize( c );
+    editorResize( { x: c.x + data.width, y: c.y + data.height } );
   }
 }
 
