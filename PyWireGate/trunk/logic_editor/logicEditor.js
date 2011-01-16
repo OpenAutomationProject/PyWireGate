@@ -39,27 +39,27 @@ $(function() {
     json_data : {
       data : [
         {
-          data : "A node",
+          data : 'System 1',
           attr : { rel : 'logic' },
           children : [ 
           {
-            data: 'My Child',
+            data: 'Subsystem 1',
             attr: { rel: 'subsystem' },
             children : [
             {
-              data: 'My second child',
+              data: 'Subsubsystem',
               attr: { rel: 'subsystem' }
               }
             ]
             },
-            "Child 1",
-            "Child 2" 
+            'Subsystem 2',
+            'Subsystem 3' 
           ]
         },
         {
           attr : { rel : 'logic' },
           data : {
-            title : "Long format demo",
+            title : 'System 2',
             attr : { href : "#" }
           }
         }
@@ -72,8 +72,8 @@ $(function() {
     },
     types: {
       types: {
-        logic    : { icon: { image: "http://static.jstree.com/v.1.0rc/_docs/_drive.png" } },
-        subsystem: { icon: { image: "http://static.jstree.com/v.1.0rc/_docs/syntax/help.png" } }
+        logic    : { icon: { image: 'icon/16/code-block.png' } },
+        subsystem: { icon: { image: 'icon/16/code-block.png' } }
       }
     }
   });
