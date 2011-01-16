@@ -15,6 +15,25 @@ h2 {
   font-size: 12pt;
 }
 
+.toolbarButton {
+  padding: 4px;
+  margin: 2px;
+  border-width: 1px;
+  border-color: #222;
+  border-radius: 6px;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px; 
+}
+
+.toolbarButton:hover {
+  border-style: outset;
+  margin: 1px;
+}
+.toolbarButton:active {
+  border-style: inset;
+  margin: 1px;
+}
+
 .libName {
   font-size: 11pt;
   font-weight: bold;

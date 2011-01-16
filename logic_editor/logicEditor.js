@@ -22,6 +22,7 @@ var overPort = false;
 var connectionLookingForInPort = true; // only relevant in connection drawing mode
 var maxX = 0; // the biggest x value of the current view
 var maxY = 0; // the biggest y value of the current view
+var zoomLevel = 10; // 1 = biggest, +inf = smallest
 
 $(function() {
   $('body').layout({ 
@@ -77,6 +78,9 @@ $(function() {
       }
     }
   });
+  
+  // prevent the toolbar images to be dragged around
+  $('img.toolbarButton').bind('dragstart', function(event) { event.preventDefault(); });
   
   drawLibrary();
   $('#editor').svg().
@@ -197,3 +201,35 @@ jQuery(document).ready(function(){
     };
   })();
 });
+
+/**
+ * Zoom the editor canvas.
+ * level == -1 : zoom out
+ * level ==  0 : NOP
+ * level == +1 : zoom in
+ * level > 1 : zoom to that value, 10 = 100% = 1:1
+ */
+function zoomEditor( level )
+{
+  if( level > 1 )
+    zoomLevel = level;
+  else
+    zoomLevel -= level;
+  var editor = $('#editor');  // quasi static variable
+  var svg    = $('#editor svg')[0];
+  var x = Math.max( maxX, editor.innerWidth() );
+  var y = Math.max( maxY, editor.innerHeight() );
+  var factor = Math.pow(Math.sqrt(2),10-zoomLevel);// Math.log(-10+zoomLevel) / Math.log( 2 );
+  if( zoomLevel < 10 )
+  {
+    svg.width.baseVal.value    = x* factor;
+    svg.height.baseVal.value   = y* factor;
+    svg.viewBox.baseVal.width  = x;
+    svg.viewBox.baseVal.height = y;
+  } else {
+    svg.width.baseVal.value    = x;
+    svg.height.baseVal.value   = y;
+    svg.viewBox.baseVal.width  = x / factor;
+    svg.viewBox.baseVal.height = y / factor;
+  }
+}
