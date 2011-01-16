@@ -335,10 +335,8 @@ function Block( type, svg, interactive )
   
   function editorConnectionPointMouseMove( event )
   {
-    //console.log( event.data.con );
-    var x = event.pageX - $('#editor')[0].offsetLeft;
-    var y = event.pageY - $('#editor')[0].offsetTop;
-    event.data.con.lastMove( [x, y] );
+    var c = getCoordinate( event );
+    event.data.con.lastMove( [c.x, c.y] );
   }
   
   function editorConnectionPointMouseUp( event )
@@ -364,11 +362,10 @@ function Block( type, svg, interactive )
         number: event.data.portNumber
       };
     } else {
-      var ex = event.pageX - $('#editor')[0].offsetLeft;
-      var ey = event.pageY - $('#editor')[0].offsetTop;
+      var c = getCoordinate( event );
       var distance = function( pos )
       {
-        return (ex-pos[0])*(ex-pos[0]) + (ey-pos[1])*(ey-pos[1]);
+        return (c.x-pos[0])*(c.x-pos[0]) + (c.y-pos[1])*(c.y-pos[1]);
       }
       if( connectionLookingForInPort )
       {
