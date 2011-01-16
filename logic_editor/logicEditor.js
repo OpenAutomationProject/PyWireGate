@@ -32,8 +32,10 @@ $(function() {
       editor.width.baseVal.value = Math.max( maxX, state.innerWidth );
       editor.height.baseVal.value = Math.max( maxY, state.innerHeight );
     },
-    north__closable: false,
-    north__resizable: false
+    north__closable : false,
+    north__resizable: false,
+    south__closable : false,
+    south__resizable: false
   });
   $('#structureTree').jstree({
     plugins : [ 'json_data', 'themes', 'types' ],
@@ -215,11 +217,14 @@ function zoomEditor( level )
     zoomLevel = level;
   else
     zoomLevel -= level;
+  zoomLevel = zoomLevel < 0 ? 0 : zoomLevel; // limit to huge 3200%
+  
   var editor = $('#editor');  // quasi static variable
   var svg    = $('#editor svg')[0];
   var x = Math.max( maxX, editor.innerWidth() );
   var y = Math.max( maxY, editor.innerHeight() );
-  var factor = Math.pow(Math.sqrt(2),10-zoomLevel);// Math.log(-10+zoomLevel) / Math.log( 2 );
+  var factor = Math.pow(Math.sqrt(2),10-zoomLevel);
+  $('#zoomLevel').html( (100*factor).toFixed() + '%' );
   if( zoomLevel < 10 )
   {
     svg.width.baseVal.value    = x* factor;
