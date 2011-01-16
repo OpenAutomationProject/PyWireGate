@@ -221,6 +221,7 @@ function Block( type, svg, interactive )
       if( height < 10 ) height = 10; // sanity...
       draw();
     }
+    editorResize( { x: x + width, y: y + height } );
     
     $.each( inPorts, function(i){
       //if( 'connection' in this )
