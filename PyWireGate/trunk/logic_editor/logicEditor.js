@@ -104,6 +104,22 @@ $(function() {
     line(-10.0, 0.0).
     close()
   );
+  marker = svg.marker( defs, 'EmptyInPort', 0.0, 0.0, 10, 10, 'auto', {style:'overflow:visible'} );
+  var path = svg.createPath();
+  svg.path( marker, path.
+    move(-5.0,-5.0).
+    line( 0.0, 0.0).
+    line(-5.0, 5.0).
+    close()
+  );
+  marker = svg.marker( defs, 'EmptyOutPort', 0.0, 0.0, 10, 10, 'auto', {style:'overflow:visible'} );
+  var path = svg.createPath();
+  svg.path( marker, path.
+    move( 0.0,-5.0).
+    line( 5.0, 0.0).
+    line( 0.0, 5.0).
+    close()
+  );
 });
 
 function drawLibrary()
@@ -113,11 +129,11 @@ function drawLibrary()
     $.each( this, function( element ){
       var entry =  $('<div class="libEntry"><div class="libEntryName">'+element+'</div></div>');
       var obj = this;
-      var width = this.width+16;
-      var height = this.height+6;
+      var width = this.width+20;
+      var height = this.height+20;
       entry.prepend( 
         $('<div style="width:'+width+'px;height:'+height+'px;" ></div>').
-        svg({onLoad:function(svg){drawElement(svg,obj,false);},settings:{width:width,height:height}}).
+        svg({onLoad:function(svg){drawElement(svg,obj,false);},settings:{width:width,height:height,viewBox:'-10 -10 '+width+' '+height}}).
         data( 'element', obj ).
         draggable({helper: function (e,ui) {
           return $(this).clone().appendTo('body').css('zIndex',5).show();
@@ -205,6 +221,15 @@ jQuery(document).ready(function(){
 });
 
 /**
+ * Calculate the current zoom factor
+ * a zoom factor of 10 equals 100%
+ */
+function zoomFactor()
+{
+  return Math.pow( Math.sqrt(2), 10-zoomLevel );
+}
+
+/**
  * Zoom the editor canvas.
  * level == -1 : zoom out
  * level ==  0 : NOP
@@ -223,12 +248,12 @@ function zoomEditor( level )
   var svg    = $('#editor svg')[0];
   var x = Math.max( maxX, editor.innerWidth() );
   var y = Math.max( maxY, editor.innerHeight() );
-  var factor = Math.pow(Math.sqrt(2),10-zoomLevel);
+  var factor = zoomFactor();
   $('#zoomLevel').html( (100*factor).toFixed() + '%' );
-  if( zoomLevel < 10 )
+  if( factor > 1 )
   {
-    svg.width.baseVal.value    = x* factor;
-    svg.height.baseVal.value   = y* factor;
+    svg.width.baseVal.value    = x * factor;
+    svg.height.baseVal.value   = y * factor;
     svg.viewBox.baseVal.width  = x;
     svg.viewBox.baseVal.height = y;
   } else {
