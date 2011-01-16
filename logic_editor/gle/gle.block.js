@@ -128,12 +128,8 @@ function Block( type, svg, interactive )
       if( 'connection' in this )
         canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, style );
       else {
-        var parameter = {
-          stroke: '#ff0000',//colorByArray( origin.getColor() ),
-          'marker-end'  : 'url(#EmptyInPort)'
-        };
         editorConnectionPointCreate(
-          canvas.line( g, p[1].x, p[1].y, p[0].x, p[0].y, parameter )
+          canvas.line( g, p[1].x, p[1].y, p[0].x, p[0].y, {'marker-end': 'url(#EmptyInPort)'} )
         , 'inPort', i );
       }
       if( maskOptions.showLabel )
@@ -149,18 +145,18 @@ function Block( type, svg, interactive )
       p[1].x -= x; p[1].y -= y; // translate back as we are in a transform
       if( 'connection' in this )
         canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, style );
-      else
-        //editorConnectionPointCreate( canvas.polyline( g, [[width+6, y-4],[width+11, y],[width+6, y+4]], style ), 'outPort', i );
-        var parameter = {
-          stroke: '#ff0000',//colorByArray( origin.getColor() ),
-          'marker-start'  : 'url(#EmptyOutPort)'
-        };
+      else {
+        canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, {'marker-start': 'url(#EmptyOutPort)'})
         editorConnectionPointCreate(
-          canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, parameter )
-        , 'outPort', i );
-      if( maskOptions.showLabel )
-        canvas.text( g, 2*p[0].x-p[1].x, 2*p[0].y-p[1].y, this.name, 
-                     {'dominant-baseline':'middle','text-anchor':'end'} );
+          canvas.rect( g, 
+            p[0].x, p[0].y-2*inset, 2*(inset+outset), 2*(inset+outset),
+            {'class':'hiddenHandle'} ),
+            'outPort', i 
+        );
+        if( maskOptions.showLabel )
+          canvas.text( g, 2*p[0].x-p[1].x, 2*p[0].y-p[1].y, this.name, 
+                      {'dominant-baseline':'middle','text-anchor':'end'} );
+      }
     });
     
     // shotcut
