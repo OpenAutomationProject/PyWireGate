@@ -20,7 +20,7 @@
 // global variables
 var overPort = false;
 var connectionLookingForInPort = true; // only relevant in connection drawing mode
-var maxX = 500; // the biggest x value of the current view
+var maxX = 0; // the biggest x value of the current view
 var maxY = 0; // the biggest y value of the current view
 
 $(function() {
@@ -28,8 +28,8 @@ $(function() {
     applyDefaultStyles: false,
     center__onresize: function( name, element, state ){
       var editor = element.find('svg')[0];
-      editor.width.baseVal.value = Math.max( maxX, state.innerWidth-2 );
-      editor.height.baseVal.value = Math.max( maxY, state.innerHeight-2 );
+      editor.width.baseVal.value = Math.max( maxX, state.innerWidth );
+      editor.height.baseVal.value = Math.max( maxY, state.innerHeight );
     },
     north__closable: false,
     north__resizable: false
@@ -146,6 +146,7 @@ function editorDrop( event, ui )
     var c = getCoordinate( {pageX: ui.position.left, pageY: ui.position.top} );
     var data = $.extend( true, c, ui.draggable.data('element') );
     drawElement( $('#editor').svg('get'), data );
+    editorResize( c );
   }
 }
 
@@ -155,6 +156,34 @@ function editorSelect( element )
     this.setAttribute( 'class', this.getAttribute( 'class' ).replace( 'selected', '' ) );
   });
   element.setAttribute( 'class', element.getAttribute( 'class' ) + ' selected' );
+}
+
+/**
+ * Iterate over all blocks to make sure the editor is big enough
+ * The optional parameter "test" allows to bypass the resize if it's not
+ * necessary, i.e. the test.{xy} fits into the current canvas
+ */
+function editorResize( test )
+{
+  var extraSpace = 20; // a bit more space, e.g. for scroll bars
+  
+  if( test !== undefined &&
+      test.x + extraSpace <= maxX && test.y + extraSpace <= maxY )
+    return;
+  
+  maxX = 0;
+  maxY = 0;
+  $.each( blockRegistry, function(){
+    var x = this.getX() + this.getWidth();
+    var y = this.getY() + this.getHeight();
+    if( x > maxX ) maxX = x;
+    if( y > maxY ) maxY = y;
+  });
+  maxX += extraSpace; maxY += extraSpace;
+  var editor = $('#editor');
+  var svg    = $('#editor svg')[0];
+  svg.width.baseVal.value = Math.max( maxX, editor.innerWidth() );
+  svg.height.baseVal.value = Math.max( maxY, editor.innerHeight() );
 }
 
 jQuery(document).ready(function(){
