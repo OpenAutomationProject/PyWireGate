@@ -46,6 +46,7 @@ function Block( type, svg, interactive )
   var inPorts     = type.inPorts     || [];
   var outPorts    = type.outPorts    || [];
   var parameters  = type.parameters  || {};
+  var parameter   = type.parameter   || createParameter( type.parameters );
   
   var canvas   = svg         || $('#editor').svg('get');
   var addEvent = interactive !== undefined ? interactive : true;
@@ -79,7 +80,8 @@ function Block( type, svg, interactive )
     };
     
     // Draw the body
-    var body = canvas.group( g, {'transform':'translate(6,1)'} );
+    //var body = canvas.group( g, {'transform':'translate(6,1)'} );
+    var body = canvas.group( g );
     if( mask )
     {
       var path = canvas.createPath();
@@ -97,9 +99,17 @@ function Block( type, svg, interactive )
           case 'line':
             path.line( sx, sy );
             break;
+            
+          case 'arc':
+            path.arc( obj.rx, obj.ry, obj.xRotate, obj.large, obj.clockwise, sx, sy, obj.relative );
+            break;
+            
+          case 'close':
+            path.close();
+            break;
         }
       }
-      canvas.path( body, path.close(), style );
+      canvas.path( body, path, style );
     } else {
       canvas.rect( body, 0, 0, width, height, style );
     }
@@ -112,25 +122,45 @@ function Block( type, svg, interactive )
     // Draw the inports
     var inPortsLength  = inPorts.length;
     $.each( inPorts, function(i){
-      var y = 1 + height * (0.5 + i)/inPortsLength;
+      var p = that.inPortPos( i );
+      p[0].x -= x; p[0].y -= y; // translate back as we are in a transform
+      p[1].x -= x; p[1].y -= y; // translate back as we are in a transform
       if( 'connection' in this )
-        canvas.line( g, 0, y, 6, y, style );
-      else
-        editorConnectionPointCreate( canvas.polyline( g, [[1, y-4],[6, y],[1, y+4]], style ), 'inPort', i );
+        canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, style );
+      else {
+        var parameter = {
+          stroke: '#ff0000',//colorByArray( origin.getColor() ),
+          'marker-end'  : 'url(#EmptyInPort)'
+        };
+        editorConnectionPointCreate(
+          canvas.line( g, p[1].x, p[1].y, p[0].x, p[0].y, parameter )
+        , 'inPort', i );
+      }
       if( maskOptions.showLabel )
-        canvas.text( g, 10, y, this.name, {'dominant-baseline':'middle','text-anchor':'start'} );
+        canvas.text( g, 2*p[0].x-p[1].x, 2*p[0].y-p[1].y, this.name, 
+                     {'dominant-baseline':'middle','text-anchor':'start'} );
     });
     
     // Draw the outports
     var outPortsLength = outPorts.length;
     $.each( outPorts, function(i){
-      var y = 1 + height * (0.5 + i)/outPortsLength;
+      var p = that.outPortPos( i );
+      p[0].x -= x; p[0].y -= y; // translate back as we are in a transform
+      p[1].x -= x; p[1].y -= y; // translate back as we are in a transform
       if( 'connection' in this )
-        canvas.line( g, width+6, y, width+12, y, style );
+        canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, style );
       else
-        editorConnectionPointCreate( canvas.polyline( g, [[width+6, y-4],[width+11, y],[width+6, y+4]], style ), 'outPort', i );
+        //editorConnectionPointCreate( canvas.polyline( g, [[width+6, y-4],[width+11, y],[width+6, y+4]], style ), 'outPort', i );
+        var parameter = {
+          stroke: '#ff0000',//colorByArray( origin.getColor() ),
+          'marker-start'  : 'url(#EmptyOutPort)'
+        };
+        editorConnectionPointCreate(
+          canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, parameter )
+        , 'outPort', i );
       if( maskOptions.showLabel )
-        canvas.text( g, width, y, this.name, {'dominant-baseline':'middle','text-anchor':'end'} );
+        canvas.text( g, 2*p[0].x-p[1].x, 2*p[0].y-p[1].y, this.name, 
+                     {'dominant-baseline':'middle','text-anchor':'end'} );
     });
     
     // shotcut
@@ -144,11 +174,21 @@ function Block( type, svg, interactive )
     
     editorDrag( g, g ); // move
     // Draw the handles
-    editorDrag( g, canvas.rect( g, 5-outset     , -outset       , 1+inset+outset, 1+inset+outset, {class:'nw-resize'} ) ); 
-    editorDrag( g, canvas.rect( g, 6+width-inset, -outset       , 1+inset+outset, 1+inset+outset, {class:'ne-resize'} ) );
-    editorDrag( g, canvas.rect( g, 5-outset     , height+1-inset, 1+inset+outset, 1+inset+outset, {class:'sw-resize'} ) );
-    editorDrag( g, canvas.rect( g, 6+width-inset, height+1-inset, 1+inset+outset, 1+inset+outset, {class:'se-resize'} ) );
+    editorDrag( g, canvas.rect( g, -outset    , -outset     , inset+outset, inset+outset, {class:'nw-resize'} ) ); 
+    editorDrag( g, canvas.rect( g, width-inset, -outset     , inset+outset, inset+outset, {class:'ne-resize'} ) );
+    editorDrag( g, canvas.rect( g, -outset    , height-inset, inset+outset, inset+outset, {class:'sw-resize'} ) );
+    editorDrag( g, canvas.rect( g, width-inset, height-inset, inset+outset, inset+outset, {class:'se-resize'} ) );
     
+  }
+  
+  function createParameter( structure )
+  {
+    var retVal = {};
+    for( var i = 0; i < structure.length; i++ )
+    {
+      retVal[ structure[i].name ] = structure[i].default;
+    }
+    return retVal;
   }
   
   // relocate itself on the canvas
@@ -227,14 +267,14 @@ function Block( type, svg, interactive )
       //if( 'connection' in this )
       if( this.connection !== undefined )
       {
-        this.connection.lastMove( that.inPortPos( i ), true );
+        this.connection.lastMove( that.inPortPos( i )[0], true );
       }
     });
     
     $.each( outPorts, function(i){
       if( 'connection' in this )
       {
-        this.connection.firstMove( that.outPortPos( i ) );
+        this.connection.firstMove( that.outPortPos( i )[0] );
       }
     });
   }
@@ -266,11 +306,21 @@ function Block( type, svg, interactive )
   }
   this.inPortPos = function( number )
   {
-    return [ x             , y + 1 + height * (0.5 + number) / inPorts.length  ];
+    if( maskOptions.inPortPos !== undefined )
+    {
+      return maskOptions.inPortPos( number, that, maskOptions, parameter );
+    } else
+      return [ 
+        { x: x    , y: y + height * (0.5 + number) / inPorts.length },
+        { x: x - 5, y: y + height * (0.5 + number) / inPorts.length }
+      ];
   }
   this.outPortPos = function( number )
   {
-    return [ x + width + 10, y + 1 + height * (0.5 + number) / outPorts.length ];
+    return [ 
+      { x: x + width    , y: y + height * (0.5 + number) / outPorts.length },
+      { x: x + width + 5, y: y + height * (0.5 + number) / outPorts.length }
+    ];
   }
   
   // Dump this Block in JSON notation to serialize it
@@ -319,10 +369,11 @@ function Block( type, svg, interactive )
     console.log( 'Block: eCPD', event );
     var pn = event.data.portNumber;
     var pt = event.data.portType;
+    var op = that.outPortPos( pn )[0];
     var c = new Connection({
       origin          : that,
       originPortNumber: pn,
-      paths           : [{path:[that.outPortPos( pn )]}]
+      paths           : [{path:[ [op.x, op.y] ]}]
     });
     that.setConnection( pt, pn,c );
     ///???
@@ -336,8 +387,7 @@ function Block( type, svg, interactive )
   
   function editorConnectionPointMouseMove( event )
   {
-    var c = getCoordinate( event );
-    event.data.con.lastMove( [c.x, c.y] );
+    event.data.con.lastMove( getCoordinate( event ) );
   }
   
   function editorConnectionPointMouseUp( event )
@@ -366,7 +416,7 @@ function Block( type, svg, interactive )
       var c = getCoordinate( event );
       var distance = function( pos )
       {
-        return (c.x-pos[0])*(c.x-pos[0]) + (c.y-pos[1])*(c.y-pos[1]);
+        return (c.x-pos.x)*(c.x-pos.x) + (c.y-pos.y)*(c.y-pos.y);
       }
       if( connectionLookingForInPort )
       {
@@ -374,7 +424,7 @@ function Block( type, svg, interactive )
         var smallestDistancePort = -1;
         for( var i = 0; i < inPorts.length; i++ )
         {
-          var dist = distance( that.inPortPos(i) );
+          var dist = distance( that.inPortPos(i)[0] );
           if( dist < smallestDistance )
           {
             smallestDistance = dist;

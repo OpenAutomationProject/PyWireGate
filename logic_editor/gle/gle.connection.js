@@ -133,7 +133,7 @@ function Connection( JSON, svg, interactive )
     //console.log('cDMM', ed );
     if( ed.extend )
     {
-      that.lastMove( [ed.origx - ed.startx + event.pageX, ed.origy - ed.starty + event.pageY], false );
+      that.lastMove( {x:ed.origx - ed.startx + event.pageX, y:ed.origy - ed.starty + event.pageY}, false );
     } else {
       paths[ed.obj[1]].path[ed.obj[2]][0] = ed.origx - ed.startx + event.pageX;
       paths[ed.obj[1]].path[ed.obj[2]][1] = ed.origy - ed.starty + event.pageY;
@@ -186,20 +186,20 @@ function Connection( JSON, svg, interactive )
     var op = overPort;
     if( !force && op && op.type == 'inPort' )
     {
-      pos = op.block.inPortPos( op.number );
+      pos = op.block.inPortPos( op.number )[0];
     }
     if( force || (op && op.type == 'inPort') )
     {
       paths[branch].target = op;
-      if( Math.abs( start[1] - pos[1] ) > 1.0 )
-        paths[branch].path.push( [ (pos[0]+start[0])/2, start[1] ] );
-      paths[branch].path.push( [ (pos[0]+start[0])/2, pos[1] ] );
+      if( Math.abs( start[1] - pos.y ) > 1.0 )
+        paths[branch].path.push( [ (pos.x+start[0])/2, start[1] ] );
+      paths[branch].path.push( [ (pos.x+start[0])/2, pos.y ] );
     } else {
       paths[branch].target = undefined;
-      if( Math.abs( start[1] - pos[1] ) > 1.0 )
-        paths[branch].path.push( [ pos[0], start[1] ] );
+      if( Math.abs( start[1] - pos.y ) > 1.0 )
+        paths[branch].path.push( [ pos.x, start[1] ] );
     }
-    paths[branch].path.push( pos );
+    paths[branch].path.push( [pos.x, pos.y] );
     draw();
   }
   
