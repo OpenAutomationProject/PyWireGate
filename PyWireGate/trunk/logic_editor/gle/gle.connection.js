@@ -157,6 +157,7 @@ function Connection( JSON, svg, interactive )
   
   this.firstMove = function( pos )
   {
+    pos = [ pos.x, pos.y ]; // convert
     if( Math.abs( paths[0].path[0][1] - paths[0].path[1][1] ) < 1.0 ) // keep horizontal line
     {
       paths[0].path[0] = pos;
