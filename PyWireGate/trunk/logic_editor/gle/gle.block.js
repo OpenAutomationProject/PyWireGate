@@ -196,9 +196,9 @@ function Block( type, svg, interactive )
   
   function editorDragMouseDown( event )
   {
-    console.log( 'eDMD', event );
+    //console.log( 'eDMD', event );
     var classList = this.getAttribute('class').split(' ');
-    console.log( 'eDMD', classList );
+    //console.log( 'eDMD', classList );
     var type = 'move';
     for( var i = 0; i < classList.length; i++ )
       if( classList[i] != '' && classList[i] != 'selected' && classList[i] != 'block' ) type = classList[i];
@@ -364,7 +364,7 @@ function Block( type, svg, interactive )
   
   function editorConnectionPointDrag( event )
   {
-    console.log( 'Block: eCPD', event );
+    //console.log( 'Block: eCPD', event );
     var pn = event.data.portNumber;
     var pt = event.data.portType;
     var op = that.outPortPos( pn )[0];
@@ -390,7 +390,7 @@ function Block( type, svg, interactive )
   
   function editorConnectionPointMouseUp( event )
   {
-    console.log( 'eCPMU' );
+    //console.log( 'eCPMU' );
     $(document).unbind( 'mousemove', editorConnectionPointMouseMove );
     $(document).unbind( 'mouseup'  , editorConnectionPointMouseUp   );
     var target = event.data.con.lastTarget();
@@ -402,7 +402,7 @@ function Block( type, svg, interactive )
   
   function editorConnectionPointOverPort( event )
   {
-    console.log( 'eCPOP', event.data.portType );
+    //console.log( 'eCPOP', event.data.portType );
     if( event.data.portType !== undefined && event.data.portNumber !== undefined )
     {
       overPort = { 
@@ -442,7 +442,7 @@ function Block( type, svg, interactive )
   
   function editorConnectionPointOverPortOut( event )
   {
-    console.log( 'eCPOPO' );
+    //console.log( 'eCPOPO' );
     overPort = false;
   }
 }
