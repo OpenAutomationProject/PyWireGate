@@ -113,7 +113,7 @@ function Block( type, svg, interactive )
     } else {
       canvas.rect( body, 0, 0, width, height, style );
     }
-    if( addEvent ) editorConnectionPointCreate( body, undefined, undefined );
+    editorConnectionPointCreate( body, undefined, undefined );
     
     // extend the style for the ports...
     style.cursor = 'crosshair';
@@ -345,6 +345,8 @@ function Block( type, svg, interactive )
   ////////////////
   function editorConnectionPointCreate( obj, portType, portNumber )
   {
+    if( !addEvent ) return;
+    
     if( portType !== undefined && portNumber !== undefined )
     {
       $(obj).bind( 'mousedown', {
