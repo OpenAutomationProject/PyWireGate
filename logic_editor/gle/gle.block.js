@@ -354,7 +354,7 @@ function Block( type, svg, interactive )
         portNumber:portNumber
       }, editorConnectionPointDrag );
     }
-    $(obj).bind( 'mouseover', {
+    $(obj).bind( 'mousemove', {
       portType  :portType,
       portNumber:portNumber
     }, editorConnectionPointOverPort );
