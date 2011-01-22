@@ -202,10 +202,7 @@ function editorResize( test )
     if( y > maxY ) maxY = y;
   });
   maxX += extraSpace; maxY += extraSpace;
-  var editor = $('#editor');
-  var svg    = $('#editor svg')[0];
-  svg.width.baseVal.value = Math.max( maxX, editor.innerWidth() );
-  svg.height.baseVal.value = Math.max( maxY, editor.innerHeight() );
+  zoomEditor( 0 ); // resize with current zoom level
 }
 
 jQuery(document).ready(function(){
@@ -214,8 +211,9 @@ jQuery(document).ready(function(){
     var editor = $('#editor');  // quasi static variable
     return function( event ) {
       var o = editor.offset();
-      return {x: event.pageX - o.left + editor.scrollLeft(),
-              y: event.pageY - o.top  + editor.scrollTop () };
+      var factor = zoomFactor();
+      return {x: (event.pageX - o.left + editor.scrollLeft()) / factor,
+              y: (event.pageY - o.top  + editor.scrollTop ()) / factor};
     };
   })();
 });
