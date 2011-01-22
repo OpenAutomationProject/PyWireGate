@@ -160,6 +160,17 @@ function Connection( JSON, svg, interactive )
       }
       path[i][0] = pos.x;
       path[i][1] = pos.y;
+      // simplify path, i.e. delete double points
+      for( var j = path.length-1; j > 0; j-- )
+      {
+        if( i == j || i == j-1 ) continue; // don't delete current point
+        if( Math.abs( path[j-1][0] - path[j][0] ) < 1.0 &&
+            Math.abs( path[j-1][1] - path[j][1] ) < 1.0 )
+        {
+          path.splice( j-1, 2 );
+          if( j < i ) ed.obj[2] -= 2;
+        }
+      }
       draw();
     }
   }
