@@ -126,7 +126,7 @@ function Block( type, svg, interactive )
       p[0].x -= x; p[0].y -= y; // translate back as we are in a transform
       p[1].x -= x; p[1].y -= y; // translate back as we are in a transform
       if( 'connection' in this )
-        canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, style );
+        ;//canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, style );
       else {
         editorConnectionPointCreate(
           canvas.line( g, p[1].x, p[1].y, p[0].x, p[0].y, {'marker-end': 'url(#EmptyInPort)'} )
@@ -144,7 +144,7 @@ function Block( type, svg, interactive )
       p[0].x -= x; p[0].y -= y; // translate back as we are in a transform
       p[1].x -= x; p[1].y -= y; // translate back as we are in a transform
       if( 'connection' in this )
-        canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, style );
+        ;//canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, style );
       else {
         canvas.line( g, p[0].x, p[0].y, p[1].x, p[1].y, {'marker-start': 'url(#EmptyOutPort)'})
         editorConnectionPointCreate(
@@ -153,10 +153,10 @@ function Block( type, svg, interactive )
             {'class':'hiddenHandle'} ),
             'outPort', i 
         );
-        if( maskOptions.showLabel )
-          canvas.text( g, 2*p[0].x-p[1].x, 2*p[0].y-p[1].y, this.name, 
-                      {'dominant-baseline':'middle','text-anchor':'end'} );
       }
+      if( maskOptions.showLabel )
+        canvas.text( g, 2*p[0].x-p[1].x, 2*p[0].y-p[1].y, this.name, 
+                    {'dominant-baseline':'middle','text-anchor':'end'} );
     });
     
     // shotcut

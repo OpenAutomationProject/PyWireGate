@@ -49,13 +49,10 @@ function Connection( JSON, svg, interactive )
   function draw()
   {
     var classList = 'connection';
-    if( g ) 
+    if( !g ) // no lines yet? Create it...
     {
-      classList = g.getAttribute('class');
-      g.parentNode.removeChild( g ); // delete the old representation
+      g = canvas.group( { 'class':classList } );
     }
-    g = canvas.group( { 'class':classList } );
-
     var parameter = {
       class: classList,
       stroke: colorByArray( origin.getColor() ),
@@ -63,14 +60,21 @@ function Connection( JSON, svg, interactive )
       'marker-end'  : 'url(#ArrowEnd)',
       fill:  'none'
     };
+    
+    var lines = $(g).find( 'polyline' );
     for( var i in paths )
     {
+      if( lines[i] === undefined )
+        lines[i] = canvas.polyline( g, [], parameter );
+      
+      lines[i].setAttribute('points', paths[i].path.join(',') );
       if( paths[i].target == undefined || origin == undefined )
-        parameter['stroke-dasharray'] = '1,3';
+        lines[i].setAttribute('stroke-dasharray', '1,3'  );
       else
-        parameter['stroke-dasharray'] = 'none';
-      var x = canvas.polyline( g, paths[i].path, parameter );
+        lines[i].setAttribute('stroke-dasharray', 'none' );
     }
+    for( var i = lines.length-1; i > paths.length; i-- )
+      lines.remove( i );
     
     // shotcut
     function connectionDrag( obj, handle )
@@ -78,6 +82,8 @@ function Connection( JSON, svg, interactive )
       $(handle).bind( 'mousedown', {obj:obj}, connectionDragMouseDown );
     }
     
+    // delete old handles
+    $(g).find('rect').remove();
     // Draw the handles
     for( var i in paths )
     {
@@ -130,13 +136,30 @@ function Connection( JSON, svg, interactive )
   function editorDragMouseMove( event )
   {
     var ed   = event.data;
+    var pos = getCoordinate(event);
     //console.log('cDMM', ed );
     if( ed.extend )
     {
-      that.lastMove( {x:ed.origx - ed.startx + event.pageX, y:ed.origy - ed.starty + event.pageY}, false );
+      that.lastMove( pos, false );
     } else {
-      paths[ed.obj[1]].path[ed.obj[2]][0] = ed.origx - ed.startx + event.pageX;
-      paths[ed.obj[1]].path[ed.obj[2]][1] = ed.origy - ed.starty + event.pageY;
+      var path = paths[ed.obj[1]].path;
+      var i = parseInt( ed.obj[2] );
+      if( path[i-1] !== undefined )
+      {
+        if( Math.abs( path[i-1][0] - path[i][0] ) < 1.0 )
+          path[i-1][0] = pos.x;
+        if( Math.abs( path[i-1][1] - path[i][1] ) < 1.0 )
+          path[i-1][1] = pos.y;
+      }
+      if( path[i+1] !== undefined )
+      {
+        if( Math.abs( path[i+1][0] - path[i][0] ) < 1.0 )
+          path[i+1][0] = pos.x;
+        if( Math.abs( path[i+1][1] - path[i][1] ) < 1.0 )
+          path[i+1][1] = pos.y;
+      }
+      path[i][0] = pos.x;
+      path[i][1] = pos.y;
       draw();
     }
   }
@@ -181,6 +204,7 @@ function Connection( JSON, svg, interactive )
   
   this.lastMove = function( pos, force )
   {
+    if( lastFixed < 0 ) lastFixed = 0; // sanity check...
     while( paths[branch].path.length > lastFixed+1 )
       paths[branch].path.pop();
     var start = paths[branch].path[ paths[branch].path.length - 1 ];

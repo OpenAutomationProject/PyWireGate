@@ -68,6 +68,11 @@ h2 {
   opacity: 0;
 }
 
+polyline.connection {
+  stroke-width: 1; 
+  fill        : none;
+}
+
 .ui-layout-pane { /* all 'panes' */ 
   border: 1px solid #BBB; 
   overflow: auto;
