@@ -261,3 +261,24 @@ function zoomEditor( level )
     svg.viewBox.baseVal.height = y / factor;
   }
 }
+
+////////////////////////
+// FIXME - delete it later, this are just helpers for debugging
+function _showEvents( target )
+{
+  var count = 0;
+  jQuery.each($(target || '*'), function(j){
+    //console.log( j, this );
+    var that = this;
+    var d = $(this).data();
+    if( d.events )
+    {
+      console.log( count, this );
+      jQuery.each( d.events, function( i, handler ){
+        //console.log( j, i, handler[0].handler.toString() );
+        console.log( count, i, handler[0].handler );
+      });
+      count++;
+    }
+  });
+}
