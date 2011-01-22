@@ -102,10 +102,10 @@ function Connection( JSON, svg, interactive )
   
   function connectionDragMouseDown( event )
   {
-    console.log( 'cDMD', event );
+    //console.log( 'cDMD', event );
     var classList = this.getAttribute('class').split(' ');
-    console.log( 'cDMD', classList );
-    console.log( 'cDMD', event.data.obj );
+    //console.log( 'cDMD', classList );
+    //console.log( 'cDMD', event.data.obj );
       
     var path = paths[ event.data.obj[1] ].path;
     var extend = event.data.obj[2] == path.length - 1
@@ -204,7 +204,7 @@ function Connection( JSON, svg, interactive )
         Math.abs( paths[0].path[1][0] - paths[0].path[2][0] ) < 1.0 &&
         Math.abs( paths[0].path[1][1] - paths[0].path[2][1] ) < 1.0 )
     {
-      console.log( 'firstMove', paths[0].path.length );
+      //console.log( 'firstMove', paths[0].path.length );
       lastFixed -= 2;
       paths[0].path.shift(); // remove front
       paths[0].path.shift(); // remove first identical

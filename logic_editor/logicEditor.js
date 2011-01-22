@@ -264,19 +264,23 @@ function zoomEditor( level )
 
 ////////////////////////
 // FIXME - delete it later, this are just helpers for debugging
-function _showEvents( target )
+function _showEvents( target, doLog )
 {
   var count = 0;
-  jQuery.each($(target || '*'), function(j){
+  jQuery.each($(target || '*'), function(j,element){
     //console.log( j, this );
     var that = this;
     var d = $(this).data();
     if( d.events )
     {
-      console.log( count, this );
+      console.log( count, element );
       jQuery.each( d.events, function( i, handler ){
         //console.log( j, i, handler[0].handler.toString() );
         console.log( count, i, handler[0].handler );
+        if( doLog )
+        {
+          $(element).bind( i, function(){} );
+        }
       });
       count++;
     }
