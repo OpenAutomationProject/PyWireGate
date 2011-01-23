@@ -33,8 +33,10 @@ function Connection( JSON, svg, interactive )
   var outset = 3; // how far should the handle stick out
   
   // setup the private variables
-  var origin      = JSON.origin      || undefined;
+  var origin           = JSON.origin;
+  var originPortNumber = JSON.originPortNumber;
   var paths       = JSON.paths       || [];
+  JSON = 0;    // not needed anymore - get it out of the closure
   var branch = 0; // the current branch to edit
   var lastFixed = 0; // the last fixed position
   
@@ -173,8 +175,13 @@ function Connection( JSON, svg, interactive )
   {
     // FIXME: convert doring the transition period
     if( ! 'x' in pos ) pos = { x: pos[0], y: pos[1] };
-    if( i < 0 ) i = paths[ branch ].path.length - 1;
-    var isLast = (i == paths[ branch ].path.length - 1);
+    
+    var path = paths[ branch ].path; 
+    var orig_pos = origin.outPortPos( originPortNumber );
+    var i = parseInt( i );           // force cast
+    
+    if( i < 0 ) i = path.length - 1;
+    //var isLast = (i == paths[ branch ].path.length - 1);
     
     if( freely )
     {
@@ -183,8 +190,6 @@ function Connection( JSON, svg, interactive )
       return;
     }
     
-    var path = paths[ branch ].path; // recycle
-    var i = parseInt( i );         // force cast
     if( extend )
     {
       if( lastPoint === undefined ) lastPoint = [ path[ i ][0], path[ i ][1] ];
@@ -280,7 +285,7 @@ function Connection( JSON, svg, interactive )
     for( var j = path.length-1; j > 0; j-- )
     {
       if( i == j || i == j-1 ) continue; // don't delete current point
-        if( Math.abs( path[j-1][0] - path[j][0] ) < 1.0 &&
+      if( Math.abs( path[j-1][0] - path[j][0] ) < 1.0 &&
           Math.abs( path[j-1][1] - path[j][1] ) < 1.0 )
         {
           path.splice( j-1, 2 );

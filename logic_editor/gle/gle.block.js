@@ -376,7 +376,6 @@ function Block( type, svg, interactive )
     that.setConnection( pt, pn,c );
     ///???
     var parameter = {con:c};
-    console.log('editorConnectionPointDrag', [op.x, op.y]);
     $(document).bind( 'mousemove', parameter, editorConnectionPointMouseMove );
     $(document).bind( 'mouseup'  , parameter, editorConnectionPointMouseUp   );
     
