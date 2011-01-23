@@ -142,36 +142,7 @@ function Connection( JSON, svg, interactive )
     {
       that.lastMove( pos, false );
     } else {
-      var path = paths[ed.obj[1]].path;
-      var i = parseInt( ed.obj[2] );
-      if( path[i-1] !== undefined )
-      {
-        if( Math.abs( path[i-1][0] - path[i][0] ) < 1.0 )
-          path[i-1][0] = pos.x;
-        if( Math.abs( path[i-1][1] - path[i][1] ) < 1.0 )
-          path[i-1][1] = pos.y;
-      }
-      if( path[i+1] !== undefined )
-      {
-        if( Math.abs( path[i+1][0] - path[i][0] ) < 1.0 )
-          path[i+1][0] = pos.x;
-        if( Math.abs( path[i+1][1] - path[i][1] ) < 1.0 )
-          path[i+1][1] = pos.y;
-      }
-      path[i][0] = pos.x;
-      path[i][1] = pos.y;
-      // simplify path, i.e. delete double points
-      for( var j = path.length-1; j > 0; j-- )
-      {
-        if( i == j || i == j-1 ) continue; // don't delete current point
-        if( Math.abs( path[j-1][0] - path[j][0] ) < 1.0 &&
-            Math.abs( path[j-1][1] - path[j][1] ) < 1.0 )
-        {
-          path.splice( j-1, 2 );
-          if( j < i ) ed.obj[2] -= 2;
-        }
-      }
-      draw();
+      that.move( ed.obj[1], ed.obj[2], pos, false );
     }
   }
   
@@ -188,33 +159,62 @@ function Connection( JSON, svg, interactive )
     draw();
   }
   
-  
-  this.firstMove = function( pos )
+  /**
+   * Move the selected point
+   * path  : the path number
+   * i     : the number of the point (-1 = last point)
+   * pos   : the new position
+   * freely: if true, ignore line alignment
+   */
+  this.move = function( path, i, pos, freely )
   {
-    pos = [ pos.x, pos.y ]; // convert
-    if( Math.abs( paths[0].path[0][1] - paths[0].path[1][1] ) < 1.0 ) // keep horizontal line
+    // FIXME: convert doring the transition period
+    if( ! 'x' in pos ) pos = { x: pos[0], y: pos[1] };
+    
+    if( freely )
     {
-      paths[0].path[0] = pos;
-      paths[0].path[1][1] = pos[1];
-    } else {
-      paths[0].path[0] = pos;
+      if( i < 0 ) i = paths[ path ].path.length - 1;
+      paths[ path ].path[ i ] = [ pos.x, pos.y ];
+      draw();
+      return;
     }
-    // remove obsolete points if the are the same now
-    if( paths[0].path.length > 3                                    &&
-        Math.abs( paths[0].path[1][0] - paths[0].path[2][0] ) < 1.0 &&
-        Math.abs( paths[0].path[1][1] - paths[0].path[2][1] ) < 1.0 )
+    
+    var path = paths[ path ].path; // recycle
+    var i = parseInt( i );         // force cast
+    if( path[i-1] !== undefined )
     {
-      //console.log( 'firstMove', paths[0].path.length );
-      lastFixed -= 2;
-      paths[0].path.shift(); // remove front
-      paths[0].path.shift(); // remove first identical
-      paths[0].path[0] = pos; // remove second identical by setting it to the first
+      if( Math.abs( path[i-1][0] - path[i][0] ) < 1.0 )
+        path[i-1][0] = pos.x;
+      if( Math.abs( path[i-1][1] - path[i][1] ) < 1.0 )
+        path[i-1][1] = pos.y;
+    }
+    if( path[i+1] !== undefined )
+    {
+      if( Math.abs( path[i+1][0] - path[i][0] ) < 1.0 )
+        path[i+1][0] = pos.x;
+      if( Math.abs( path[i+1][1] - path[i][1] ) < 1.0 )
+        path[i+1][1] = pos.y;
+    }
+    path[i][0] = pos.x;
+    path[i][1] = pos.y;
+    
+    // simplify path, i.e. delete double points
+    for( var j = path.length-1; j > 0; j-- )
+    {
+      if( i == j || i == j-1 ) continue; // don't delete current point
+        if( Math.abs( path[j-1][0] - path[j][0] ) < 1.0 &&
+          Math.abs( path[j-1][1] - path[j][1] ) < 1.0 )
+        {
+          path.splice( j-1, 2 );
+          //if( j < i ) ed.obj[2] -= 2;
+        }
     }
     draw();
   }
   
   this.lastMove = function( pos, force )
   {
+    //this.move( 0, -1, pos, false ); return; // FIXME: change to move and then delete method
     if( lastFixed < 0 ) lastFixed = 0; // sanity check...
     while( paths[branch].path.length > lastFixed+1 )
       paths[branch].path.pop();

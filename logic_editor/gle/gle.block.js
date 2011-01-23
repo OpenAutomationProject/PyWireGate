@@ -270,7 +270,7 @@ function Block( type, svg, interactive )
     $.each( outPorts, function(i){
       if( 'connection' in this )
       {
-        this.connection.firstMove( that.outPortPos( i )[0] );
+        this.connection.move( 0, 0, that.outPortPos( i )[0] );
       }
     });
   }
