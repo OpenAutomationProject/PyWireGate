@@ -119,6 +119,7 @@ function Connection( JSON, svg, interactive )
     };
     
     lastFixed = path.length - 1;
+    lastPoint = undefined;
     
     /*
     if( extend )
@@ -140,9 +141,9 @@ function Connection( JSON, svg, interactive )
     //console.log('cDMM', ed );
     if( ed.extend )
     {
-      that.lastMove( pos, false );
+      that.move( ed.obj[1], -1, pos, false, true );
     } else {
-      that.move( ed.obj[1], ed.obj[2], pos, false );
+      that.move( ed.obj[1], ed.obj[2], pos, false, false );
     }
   }
   
@@ -161,43 +162,120 @@ function Connection( JSON, svg, interactive )
   
   /**
    * Move the selected point
-   * path  : the path number
+   * branch: the path number
    * i     : the number of the point (-1 = last point)
    * pos   : the new position
    * freely: if true, ignore line alignment
+   * extend: continue connection to pos
    */
-  this.move = function( path, i, pos, freely )
+  var lastPoint = undefined;
+  this.move = function( branch, i, pos, freely, extend )
   {
     // FIXME: convert doring the transition period
     if( ! 'x' in pos ) pos = { x: pos[0], y: pos[1] };
+    if( i < 0 ) i = paths[ branch ].path.length - 1;
+    var isLast = (i == paths[ branch ].path.length - 1);
     
     if( freely )
     {
-      if( i < 0 ) i = paths[ path ].path.length - 1;
-      paths[ path ].path[ i ] = [ pos.x, pos.y ];
+      paths[ branch ].path[ i ] = [ pos.x, pos.y ];
       draw();
       return;
     }
     
-    var path = paths[ path ].path; // recycle
+    var path = paths[ branch ].path; // recycle
     var i = parseInt( i );         // force cast
-    if( path[i-1] !== undefined )
+    if( extend )
     {
-      if( Math.abs( path[i-1][0] - path[i][0] ) < 1.0 )
-        path[i-1][0] = pos.x;
-      if( Math.abs( path[i-1][1] - path[i][1] ) < 1.0 )
-        path[i-1][1] = pos.y;
+      if( lastPoint === undefined ) lastPoint = [ path[ i ][0], path[ i ][1] ];
+      while( path.length > lastFixed+1 )
+        path.pop();
+      i = path.length - 1;
+      var dir = 0; // 0 = lr, 1 = td, 2 = rl, 3 = dt
+      if( path[i-1] !== undefined )
+      {
+        if( Math.abs( path[i-1][0] - path[i][0] ) < 1.0 ) // vertical
+        {
+          if( path[i-1][1] < path[i][1] )
+            dir = 1;
+          else
+            dir = 3;
+        } else { // assume horizontal
+          if( path[i-1][0] < path[i][0] )
+            dir = 0;
+          else
+            dir = 2;
+        }
+      } else { // this is the staring point => query block!
+        // FIXME - implement!
+        path[1] = [ path[0][0], path[0][1] ]; i++;
+      }
+      //console.log( 'extend', dir, i, path.length, lastFixed, path, lastPoint );
+      var op = overPort;
+      if( op && op.type == 'inPort' )
+      {
+        pos = op.block.inPortPos( op.number )[0];
+        paths[branch].target = op;
+      } else
+        paths[branch].target = undefined;
+      
+      switch( dir )
+      {
+        case 0:
+          if( pos.x < lastPoint[0] )
+          {
+            path[i][0] = lastPoint[0];
+            path.push( [ lastPoint[0], pos.y ] );
+          } else
+            path[i][0] = pos.x;
+          break;
+          
+        case 1:
+          if( pos.y < lastPoint[1] )
+          {
+            path[i][1] = lastPoint[1];
+            path.push( [ pos.x, lastPoint[1] ] );
+          } else
+            path[i][1] = pos.y;
+          break;
+          
+        case 2:
+          if( pos.x > lastPoint[0] )
+          {
+            path[i][0] = lastPoint[0];
+            path.push( [ lastPoint[0], pos.y ] );
+          } else
+            path[i][0] = pos.x;
+          break;
+          
+        case 3:
+          if( pos.y > lastPoint[1] )
+          {
+            path[i][1] = lastPoint[1];
+            path.push( [ pos.x, lastPoint[1] ] );
+          } else
+            path[i][1] = pos.y;
+          break;
+      }
+      path.push( [ pos.x, pos.y ] );
+    } else {
+      if( path[i-1] !== undefined )
+      {
+        if( Math.abs( path[i-1][0] - path[i][0] ) < 1.0 )
+          path[i-1][0] = pos.x;
+        if( Math.abs( path[i-1][1] - path[i][1] ) < 1.0 )
+          path[i-1][1] = pos.y;
+      }
+      if( path[i+1] !== undefined )
+      {
+        if( Math.abs( path[i+1][0] - path[i][0] ) < 1.0 )
+          path[i+1][0] = pos.x;
+        if( Math.abs( path[i+1][1] - path[i][1] ) < 1.0 )
+          path[i+1][1] = pos.y;
+      }
+      path[i][0] = pos.x;
+      path[i][1] = pos.y;
     }
-    if( path[i+1] !== undefined )
-    {
-      if( Math.abs( path[i+1][0] - path[i][0] ) < 1.0 )
-        path[i+1][0] = pos.x;
-      if( Math.abs( path[i+1][1] - path[i][1] ) < 1.0 )
-        path[i+1][1] = pos.y;
-    }
-    path[i][0] = pos.x;
-    path[i][1] = pos.y;
-    
     // simplify path, i.e. delete double points
     for( var j = path.length-1; j > 0; j-- )
     {
@@ -209,33 +287,6 @@ function Connection( JSON, svg, interactive )
           //if( j < i ) ed.obj[2] -= 2;
         }
     }
-    draw();
-  }
-  
-  this.lastMove = function( pos, force )
-  {
-    //this.move( 0, -1, pos, false ); return; // FIXME: change to move and then delete method
-    if( lastFixed < 0 ) lastFixed = 0; // sanity check...
-    while( paths[branch].path.length > lastFixed+1 )
-      paths[branch].path.pop();
-    var start = paths[branch].path[ paths[branch].path.length - 1 ];
-    var op = overPort;
-    if( !force && op && op.type == 'inPort' )
-    {
-      pos = op.block.inPortPos( op.number )[0];
-    }
-    if( force || (op && op.type == 'inPort') )
-    {
-      paths[branch].target = op;
-      if( Math.abs( start[1] - pos.y ) > 1.0 )
-        paths[branch].path.push( [ (pos.x+start[0])/2, start[1] ] );
-      paths[branch].path.push( [ (pos.x+start[0])/2, pos.y ] );
-    } else {
-      paths[branch].target = undefined;
-      if( Math.abs( start[1] - pos.y ) > 1.0 )
-        paths[branch].path.push( [ pos.x, start[1] ] );
-    }
-    paths[branch].path.push( [pos.x, pos.y] );
     draw();
   }
   

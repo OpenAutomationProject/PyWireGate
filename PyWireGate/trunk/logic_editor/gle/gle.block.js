@@ -263,7 +263,7 @@ function Block( type, svg, interactive )
       //if( 'connection' in this )
       if( this.connection !== undefined )
       {
-        this.connection.lastMove( that.inPortPos( i )[0], true );
+        this.connection.move( 0, -1, that.inPortPos( i )[0], false, false );
       }
     });
     
@@ -376,7 +376,7 @@ function Block( type, svg, interactive )
     that.setConnection( pt, pn,c );
     ///???
     var parameter = {con:c};
-    
+    console.log('editorConnectionPointDrag', [op.x, op.y]);
     $(document).bind( 'mousemove', parameter, editorConnectionPointMouseMove );
     $(document).bind( 'mouseup'  , parameter, editorConnectionPointMouseUp   );
     
@@ -385,7 +385,7 @@ function Block( type, svg, interactive )
   
   function editorConnectionPointMouseMove( event )
   {
-    event.data.con.lastMove( getCoordinate( event ) );
+    event.data.con.move( 0, -1, getCoordinate( event ), false, true );
   }
   
   function editorConnectionPointMouseUp( event )
