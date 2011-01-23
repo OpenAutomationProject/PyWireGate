@@ -422,6 +422,8 @@ function Block( type, svg, interactive )
         var smallestDistancePort = -1;
         for( var i = 0; i < inPorts.length; i++ )
         {
+          if( inPorts[i].connection ) continue;
+          
           var dist = distance( that.inPortPos(i)[0] );
           if( dist < smallestDistance )
           {
