@@ -101,7 +101,9 @@ function Block( type, svg, interactive )
             break;
             
           case 'arc':
-            path.arc( obj.rx, obj.ry, obj.xRotate, obj.large, obj.clockwise, sx, sy, obj.relative );
+            var rx = scaleRelPos( obj.rx, width  ); 
+            var ry = scaleRelPos( obj.ry, height ); 
+            path.arc( rx, ry, obj.xRotate, obj.large, obj.clockwise, sx, sy, obj.relative );
             break;
             
           case 'close':

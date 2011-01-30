@@ -86,8 +86,8 @@
   },
   'mathLib': {
     'gain': {
-      'width': 100,
-      'height': 100,
+      'width': 75,
+      'height': 75,
       'rotation': 0,
       'flip': false,
       'color': [0.0, 0.0, 0.0],
@@ -121,8 +121,8 @@
       ]
     },
     'sum': {
-      'width': 100,
-      'height': 100,
+      'width': 50,
+      'height': 50,
       'rotation': 0,
       'flip': false,
       'color': [0.0, 0.0, 0.0],
@@ -130,7 +130,7 @@
       'mask': [
       { 'type': 'move', 'x': 0    , 'y': 0.495  }, 
       { 'type': 'arc' , 'x': 0    , 'y': 0.01   , 
-        'rx': 50, 'ry': 50, 'xRotate':0, 'large':true, 'clockwise': true,
+        'rx': 0.5, 'ry': 0.5, 'xRotate':0, 'large':true, 'clockwise': true,
         'relative': true
       },
       { 'type': 'close' }
