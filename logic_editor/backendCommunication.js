@@ -93,7 +93,7 @@
       'color': [0.0, 0.0, 0.0],
       'background': [1.0, 1.0, 1.0],
       'mask': [
-      { 'type': 'move', 'x': 0.999, 'y': 0.5   }, // just to show what's possible
+      { 'type': 'move', 'x': 0.999, 'y': 0.5   }, // it must allways start with a move!
       { 'type': 'line', 'x': 0    , 'y': 0.999 },
       { 'type': 'line', 'x': 0    , 'y': 0     },
       { 'type': 'close' }
@@ -191,6 +191,49 @@
         'type': 'string',
         'default': '|++'
       }
+      ]
+    },
+    'integral': {
+      'width': 75,
+      'height': 75,
+      'rotation': 0,
+      'flip': false,
+      'color': [0.0, 0.0, 0.0],
+      'background': [1.0, 1.0, 1.0],
+      'mask': [
+      { 'type': 'move', 'x': 0    , 'y': 0     }, // it must allways start with a move!
+      { 'type': 'line', 'x': 0    , 'y': 0.999 },
+      { 'type': 'line', 'x': 0.999, 'y': 0.999 },
+      { 'type': 'line', 'x': 0.999, 'y': 0     },
+      { 'type': 'close' },
+      { 'type': 'new', 'fill': 'none' },
+      { 'type': 'move', 'x': 0.55 , 'y': 0.1   }, 
+      { 'type': 'arc' , 'x': 0.50  , 'y': 0.1    , 
+        'rx': 0.025, 'ry': 0.025, 'xRotate':0, 'large':true, 'clockwise': false,
+        'relative': false
+      },
+      { 'type': 'line', 'x': 0.5  , 'y': 0.9   },
+      { 'type': 'arc' , 'x': 0.45 , 'y': 0.9    , 
+        'rx': 0.025, 'ry': 0.025, 'xRotate':0, 'large':true, 'clockwise': true,
+        'relative': false
+      }
+      ],
+      'maskOptions': {
+        'showLabel': false
+      },
+      'inPorts': [
+      { 
+        'name': 'in',
+        'type': 'event'
+      }
+      ],
+      'outPorts': [
+      { 
+        'name': 'out',
+        'type': 'event'
+      }
+      ],
+      'parameters': [
       ]
     }
   }

@@ -109,6 +109,12 @@ function Block( type, svg, interactive )
           case 'close':
             path.close();
             break;
+            
+          case 'new': // start a new path
+            canvas.path( body, path, style );
+            if( obj.fill !== undefined ) style.fill = obj.fill;
+            path = canvas.createPath();
+            break;
         }
       }
       canvas.path( body, path, style );
