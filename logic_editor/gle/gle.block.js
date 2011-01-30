@@ -121,6 +121,8 @@ function Block( type, svg, interactive )
     } else {
       canvas.rect( body, 0, 0, width, height, style );
     }
+    if( addEvent && !$.isEmptyObject(parameters) ) 
+      $(body).dblclick(that.showParameterMenu);
     editorConnectionPointCreate( body, undefined, undefined );
     
     // extend the style for the ports...
@@ -345,6 +347,40 @@ function Block( type, svg, interactive )
       outPorts    : outPorts    ,
       parameters  : parameters  
     };
+  }
+  
+  this.showParameterMenu = function()
+  {
+    //alert('sPM');
+    var dialog = $('<div title="Change parameters"></div>');
+    for( var i = 0; i < parameters.length; i++ )
+    {
+      var line = '<label for="' + parameters[i].name + '">' + parameters[i].name + '</label>';
+      line += '<input type="' + parameters[i].type              + '" ';
+      line += ' name="'       + parameters[i].name              + '" ';
+      line += ' value="'      + parameter[ parameters[i].name ] + '" ';
+      line += ' class="text ui-widget-content ui-corner-all" />';
+      
+      dialog.append( $( line ) );
+    }
+    dialog.dialog({
+      modal: true,
+      buttons: {
+        OK    : function() {
+          $('.ui-dialog input').each(function(){
+            parameter[ this.name ] = this.value;
+          });
+          $( this ).dialog( 'close' );
+          draw();
+        },
+        Cancel: function() {
+          $( this ).dialog( 'close' );
+        }
+      },
+      close: function() {}
+        
+    });
+    
   }
   
   // finally draw itself:
