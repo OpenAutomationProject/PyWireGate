@@ -98,10 +98,11 @@ function Connection( JSON, svg, interactive )
       {
         var x = paths[i].path[j][0];
         var y = paths[i].path[j][1];
+        var thisClass = 'move';
         var style = '';
-        if( j == 0 || j == paths[i].path.length-1 ) style  = 'opacity:0;';
+        if( j == 0 || j == paths[i].path.length-1 ) {style  = 'opacity:0;'; thisClass += 'firstlast'; }
         if( inEdit && j == paths[i].path.length-1 ) style += 'display:none';
-        connectionDrag( [g,i,j], canvas.rect( g, x-outset, y-outset, 1+inset+outset, 1+inset+outset, {class:'move',style:style} ) ); 
+        connectionDrag( [g,i,j], canvas.rect( g, x-outset, y-outset, 1+inset+outset, 1+inset+outset, {class:thisClass,style:style} ) ); 
       }
     }
     
