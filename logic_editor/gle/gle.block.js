@@ -47,6 +47,7 @@ function Block( type, svg, interactive )
   var outPorts    = type.outPorts    || [];
   var parameters  = type.parameters  || {};
   var parameter   = type.parameter   || createParameter( type.parameters );
+  var postParameterUpdateFn = maskOptions.postParameterUpdate;
   
   var canvas   = svg         || $('#editor').svg('get');
   var addEvent = interactive !== undefined ? interactive : true;
@@ -195,6 +196,19 @@ function Block( type, svg, interactive )
       retVal[ structure[i].name ] = structure[i].default;
     }
     return retVal;
+  }
+  
+  // gets called when any of the parameters were updated so that the behaviour
+  // can change, e.g. the number of ports could be changed
+  function postParameterUpdate()
+  {
+    if( postParameterUpdateFn == undefined ) return; // nothing to do
+
+    var change = postParameterUpdateFn( that, parameter );
+    if( change.inPorts !== undefined )
+      inPorts = change.inPorts;
+    if( change.outPorts !== undefined )
+      outPorts = change.outPorts;
   }
   
   // relocate itself on the canvas
@@ -371,6 +385,7 @@ function Block( type, svg, interactive )
             parameter[ this.name ] = this.value;
           });
           $( this ).dialog( 'close' );
+          postParameterUpdate();
           draw();
         },
         Cancel: function() {

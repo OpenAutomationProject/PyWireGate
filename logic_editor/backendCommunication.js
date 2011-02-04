@@ -167,6 +167,24 @@
             }
           }
           return [ {x: undefined, y: undefined}, {x: undefined, y: undefined} ];
+        },
+        'postParameterUpdate': function( context, parameter ){
+          var inPorts = [];
+          for( i in parameter.inputs )
+          {
+            switch( parameter.inputs[i] )
+            {
+              case '+':
+                inPorts.push( { name: '+', type: 'event' } );
+                break;
+              case '-':
+                inPorts.push( { name: '-', type: 'event' } );
+                break;
+              default: // e.g. '|'
+                break;
+            }
+          }
+          return { inPorts: inPorts };
         }
       },
       'inPorts': [
