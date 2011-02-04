@@ -120,6 +120,8 @@ $(function() {
     line( 0.0, 5.0).
     close()
   );
+  
+  $(document).bind('keydown', 'del', function(){ $('.selected').remove(); });
 });
 
 function drawLibrary()
