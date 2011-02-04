@@ -40,11 +40,11 @@ h2 {
   margin-top: 1em;
 }
 
-.ne-resize, .nw-resize, .se-resize, .sw-resize {
+.ne-resize, .nw-resize, .se-resize, .sw-resize, .move {
   display: none;
 }
 
-.selected .ne-resize, .selected .nw-resize, .selected .se-resize, .selected .sw-resize {
+.selected .ne-resize, .selected .nw-resize, .selected .se-resize, .selected .sw-resize, .selected .move {
   display: inline;
 }
 

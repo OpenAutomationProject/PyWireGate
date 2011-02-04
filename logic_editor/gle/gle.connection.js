@@ -66,14 +66,19 @@ function Connection( JSON, svg, interactive )
     var lines = $(g).find( 'polyline' );
     for( var i in paths )
     {
-      if( lines[i] === undefined )
-        lines[i] = canvas.polyline( g, [], parameter );
+      if( lines[i*2] === undefined )
+      {
+        lines[i*2  ] = canvas.polyline( g, [], {fill:'none',style:'opacity:0;stroke:#fff;stroke-width:5px'} );
+        $( lines[i*2] ).click( function(){editorSelect(g);} );
+        lines[i*2+1] = canvas.polyline( g, [], parameter );
+      }
       
-      lines[i].setAttribute('points', paths[i].path.join(',') );
+      lines[i*2  ].setAttribute('points', paths[i].path.join(',') );
+      lines[i*2+1].setAttribute('points', paths[i].path.join(',') );
       if( paths[i].target == undefined || origin == undefined )
-        lines[i].setAttribute('stroke-dasharray', '1,3'  );
+        lines[i*2+1].setAttribute('stroke-dasharray', '1,3'  );
       else
-        lines[i].setAttribute('stroke-dasharray', 'none' );
+        lines[i*2+1].setAttribute('stroke-dasharray', 'none' );
     }
     for( var i = lines.length-1; i > paths.length; i-- )
       lines.remove( i );
