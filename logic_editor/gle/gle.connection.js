@@ -217,9 +217,11 @@ function Connection( JSON, svg, interactive )
       }
       //console.log( 'extend', dir, i, path.length, lastFixed, path, lastPoint );
       var op = overPort;
+      var prePos = undefined;
       if( op && op.type == 'inPort' )
       {
-        pos = op.block.inPortPos( op.number )[0];
+        pos    = op.block.inPortPos( op.number )[1];
+        prePos = op.block.inPortPos( op.number )[0];
         paths[branch].target = op;
       } else
         paths[branch].target = undefined;
@@ -263,6 +265,8 @@ function Connection( JSON, svg, interactive )
           break;
       }
       path.push( [ pos.x, pos.y ] );
+      if( prePos )
+        path.push( [ prePos.x, prePos.y ] );
     } else {
       if( path[i-1] !== undefined )
       {

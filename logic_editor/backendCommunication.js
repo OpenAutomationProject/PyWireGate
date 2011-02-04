@@ -159,8 +159,8 @@
                 var c = Math.cos( angle );
                 return [ { x: x + width  * 0.5 * ( 1 + c ),
                            y: y + height * 0.5 * ( 1 - s ) },
-                         { x: x + width  * 0.5 + (width +5) * 0.5 * c,
-                           y: y + height * 0.5 - (height+5) * 0.5 * s }
+                         { x: x + width  * 0.5 + (width +40) * 0.5 * c,
+                           y: y + height * 0.5 - (height+40) * 0.5 * s }
                        ];
               }
               nr--;

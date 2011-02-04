@@ -144,7 +144,7 @@ function Block( type, svg, interactive )
         , 'inPort', i );
       }
       if( maskOptions.showLabel )
-        canvas.text( g, 2*p[0].x-p[1].x, 2*p[0].y-p[1].y, this.name, 
+        canvas.text( g, 1.2*p[0].x-0.2*p[1].x, 1.2*p[0].y-0.2*p[1].y, this.name, 
                      {'dominant-baseline':'middle','text-anchor':'start'} );
     });
     
@@ -166,7 +166,7 @@ function Block( type, svg, interactive )
         );
       }
       if( maskOptions.showLabel )
-        canvas.text( g, 2*p[0].x-p[1].x, 2*p[0].y-p[1].y, this.name, 
+        canvas.text( g, 1.2*p[0].x-0.2*p[1].x, 1.2*p[0].y-0.2*p[1].y, this.name, 
                     {'dominant-baseline':'middle','text-anchor':'end'} );
     });
     
@@ -331,15 +331,15 @@ function Block( type, svg, interactive )
       return maskOptions.inPortPos( number, that, maskOptions, parameter );
     } else
       return [ 
-        { x: x    , y: y + height * (0.5 + number) / inPorts.length },
-        { x: x - 5, y: y + height * (0.5 + number) / inPorts.length }
+        { x: x     , y: y + height * (0.5 + number) / inPorts.length },
+        { x: x - 20, y: y + height * (0.5 + number) / inPorts.length }
       ];
   }
   this.outPortPos = function( number )
   {
     return [ 
-      { x: x + width    , y: y + height * (0.5 + number) / outPorts.length },
-      { x: x + width + 5, y: y + height * (0.5 + number) / outPorts.length }
+      { x: x + width     , y: y + height * (0.5 + number) / outPorts.length },
+      { x: x + width + 20, y: y + height * (0.5 + number) / outPorts.length }
     ];
   }
   
