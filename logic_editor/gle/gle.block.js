@@ -107,6 +107,35 @@ function Block( type, svg, interactive )
             path.arc( rx, ry, obj.xRotate, obj.large, obj.clockwise, sx, sy, obj.relative );
             break;
             
+          case 'text':
+            var param = {'text-anchor':'start'};
+            for( var thisStyle in obj.styling )
+            {
+              switch( obj.styling[thisStyle] )
+              {
+                case 'italic':
+                  param['font-style'] = 'italic';
+                  break;
+                case 'bold':
+                  param['font-weight'] = 'bold';
+                  break;
+                case 'left':
+                  param['text-anchor'] = 'start';
+                  break;
+                case 'middle':
+                  param['text-anchor'] = 'middle';
+                  break;
+                case 'right':
+                  param['text-anchor'] = 'end';
+                  break;
+              }
+            }
+            var text = obj.text;
+            for( var p in parameter )
+              text = text.replace( '$' + p, parameter[p] );
+            canvas.text( body, sx, sy, text, param );
+            break;
+            
           case 'close':
             path.close();
             break;

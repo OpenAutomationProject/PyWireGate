@@ -96,7 +96,9 @@
       { 'type': 'move', 'x': 0.999, 'y': 0.5   }, // it must allways start with a move!
       { 'type': 'line', 'x': 0    , 'y': 0.999 },
       { 'type': 'line', 'x': 0    , 'y': 0     },
-      { 'type': 'close' }
+      { 'type': 'close' },
+      { 'type': 'new', 'fill': 'none' },
+      { 'type': 'text', 'x': 0.4, 'y': 0.55, 'text': '$gain', 'styling':['middle'] }
       ],
       'maskOptions': {
         'showLabel': false
@@ -116,7 +118,8 @@
       'parameters': [
         { 
           'name': 'gain',
-          'type': 'float'
+          'type': 'float',
+          'default': 1.0
         }
       ]
     },
@@ -234,7 +237,9 @@
       { 'type': 'arc' , 'x': 0.45 , 'y': 0.9    , 
         'rx': 0.025, 'ry': 0.025, 'xRotate':0, 'large':true, 'clockwise': true,
         'relative': false
-      }
+      },
+      { 'type': 'text', 'x': 0.6, 'y': 0.5, 'text': 'd' },
+      { 'type': 'text', 'x': 0.6, 'y': 0.5, 'text': '\u2002t', 'styling':['italic'] }
       ],
       'maskOptions': {
         'showLabel': false
