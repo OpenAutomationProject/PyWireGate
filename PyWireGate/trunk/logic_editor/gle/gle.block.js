@@ -33,6 +33,7 @@ function Block( type, svg, interactive )
   var outset = 3; // how far should the handle stick out
   
   // setup the private variables
+  var name        = type.name        || 'UNKNOWN';
   var x           = type.x           || 0;
   var y           = type.y           || 0;
   var width       = type.width       || 100;
@@ -198,6 +199,9 @@ function Block( type, svg, interactive )
         canvas.text( g, 1.2*p[0].x-0.2*p[1].x, 1.2*p[0].y-0.2*p[1].y, this.name, 
                     {'dominant-baseline':'middle','text-anchor':'end'} );
     });
+    
+    // Draw the label
+    canvas.text( body, width/2, height+15, name, {'text-anchor':'middle'} );
     
     // shotcut
     function editorDrag( obj, handle )

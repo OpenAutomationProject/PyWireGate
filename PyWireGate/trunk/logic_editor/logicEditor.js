@@ -37,10 +37,12 @@ $(function() {
     south__closable : false,
     south__resizable: false
   });
-  $('#structureTree').jstree({
-    plugins : [ 'json_data', 'themes', 'types' ],
+  $('#structureTree').bind("select_node.jstree", function (event, data) {
+    displayLogic( $.trim( $(data.args[0]).text() ) );
+  }).jstree({
+    plugins : [ 'json_data', 'themes', 'types', 'ui' ],
     json_data : {
-      data : [
+      data : [/*
         {
           data : 'System 1',
           attr : { rel : 'logic' },
@@ -65,7 +67,7 @@ $(function() {
             title : 'System 2',
             attr : { href : "#" }
           }
-        }
+        }*/
       ]
     },
     themes: {
@@ -77,7 +79,11 @@ $(function() {
       types: {
         logic    : { icon: { image: 'icon/16/code-block.png' } },
         subsystem: { icon: { image: 'icon/16/code-block.png' } }
-      }
+      },
+    },
+    'ui' : {
+      'select_limit' : 1,
+      'selected_parent_close' : 'select_parent'
     }
   });
   
@@ -129,10 +135,10 @@ function drawLibrary()
   $.each( libJSON, function( libName ){
     var lib = $('<div class="lib"><div class="libName">'+libName+'</div></div>');
     $.each( this, function( element ){
-      var entry =  $('<div class="libEntry"><div class="libEntryName">'+element+'</div></div>');
+      var entry =  $('<div class="libEntry"></div>');
       var obj = this;
       var width = this.width+20;
-      var height = this.height+20;
+      var height = this.height+35;
       entry.prepend( 
         $('<div style="width:'+width+'px;height:'+height+'px;" ></div>').
         svg({onLoad:function(svg){drawElement(svg,obj,false);},settings:{width:width,height:height,viewBox:'-10 -10 '+width+' '+height}}).
@@ -147,12 +153,47 @@ function drawLibrary()
   });
 }
 
-var blockRegistry = [];
+function updateKnownLogics( newLogicName )
+{
+  $('#structureTree').jstree('create_node', -1, 'after',  { 
+    'data' : newLogicName,
+    'attr' : { rel : 'logic'}
+  });
+}
+
+function displayLogic( logicName )
+{
+  console.log( '"'+logicName+'"' );
+  logic = logics[ logicName ];
+  $.each( logic.blocks, function( name, def ){
+    var newBlock = $.extend( true, {}, libJSON['MainLib'][ def.type ], def, {'name':name} );
+    drawElement( undefined, newBlock, true );
+  });
+  console.log( blockRegistry );
+  $.each( logic.signals, function( name, def ){
+    console.log( name, def, blockRegistry[ def[0] ] );
+    
+    var startBlock = blockRegistry[ def[0] ];
+    var endBlock = blockRegistry[ def[2] ];
+    var pn = def[1];
+    var op = startBlock.outPortPos( pn )[0];
+    var ip = endBlock.inPortPos( def[3] )[0];
+    var c = new Connection({
+      origin          : startBlock,
+      originPortNumber: pn,
+      paths           : [{path:[ [op.x, op.y], [ip.x, ip.y] ],target:endBlock}]
+    });
+    startBlock.setConnection( 'outPort', pn, c );
+    endBlock.setConnection( 'inPort', def[3], c );
+  });
+}
+
+var blockRegistry = {};
 
 function drawElement( svg, element, addEvent ){
   if( addEvent === undefined ) addEvent = true;
   var b = new Block( element, svg, addEvent );
-  if( addEvent ) blockRegistry.push( b );
+  if( addEvent ) blockRegistry[ element.name ] = b;
 }
 
 function colorByArray( a )

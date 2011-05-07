@@ -1,0 +1,43 @@
+{
+  "blocks": {
+    "Memory1": {
+      "type": "memory",
+      "x": 150, "y": 300, "width": 50, "height": 50,
+      "parameters": { "initial_value": 1.0 }
+    },
+    "Gain1": {
+      "type": "gain",
+      "x": 50, "y": 150, "width": 50, "height": 50,
+      "parameters": { "gain": "__dt" }
+    },
+    "Sum1": {
+      "type": "sum",
+      "x": 150, "y": 200, "width": 50, "height": 50,
+      "parameters": {}
+    },
+    "Log22": {
+      "type": "log",
+      "x": 350, "y": 300, "width": 50, "height": 50,
+      "parameters": {}
+    },
+    "Integral2": {
+      "type": "integral",
+      "x": 250, "y": 300, "width": 50, "height": 50,
+      "parameters": { "inital_value": 0.0 }
+    },
+    "Gain2": {
+      "type": "gain",
+      "x": 150, "y": 50, "width": 50, "height": 50,
+      "parameters": { "gain": -1.0 }
+    }
+  },
+  "signals": [
+    [ "Memory1"  , 0, "Integral2" , 0, {} ],
+    [ "Gain1"    , 0, "Sum1"      , 0, {} ],
+    [ "Sum1"     , 0, "Memory1"   , 0, {} ],
+    [ "Memory1"  , 0, "Sum1"      , 1, {} ],
+    [ "Integral2", 0, "Gain2"     , 0, {} ],
+    [ "Gain2"    , 0, "Gain1"     , 0, {} ],
+    [ "Integral2", 0, "Log22"     , 0, {} ]
+  ]
+}

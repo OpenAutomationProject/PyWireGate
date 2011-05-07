@@ -1,5 +1,5 @@
  // Sollte das Backend dynamisch aus den verfuegbaren Bloecken generieren:
- var libJSON = {
+ /*var libJSON = {
   'sourceLib': {
     'source1': {
       'width': 100,
@@ -260,7 +260,21 @@
       ]
     }
   }
-};
+};*/
 
-// Die Struktur mit der feritgen Logik
-var logicJSON = {};
+var libJSON = {};
+$.getJSON('/logicLib', function(data) {
+  libJSON = data;
+  drawLibrary();
+});
+
+// The array with all known logics (should be filled on demand later)
+var logics = {};
+$.getJSON('/logicCode/logik.json', function(data) {
+  logics['logik'] = data;
+  updateKnownLogics('logik');
+});
+$.getJSON('/logicCode/logik2.json', function(data) {
+  logics['logik2'] = data;
+  updateKnownLogics('logik2');
+});
