@@ -60,6 +60,7 @@ function Connection( JSON, svg, interactive )
       stroke: colorByArray( origin.getColor() ),
       'stroke-width': 1, 
       'marker-end'  : 'url(#ArrowEnd)',
+      'z-index': 999,
       fill:  'none'
     };
     
@@ -318,5 +319,7 @@ function Connection( JSON, svg, interactive )
       paths       : paths
     };
   }
+  
+  draw(); // show directly after construction
 }
 

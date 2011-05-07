@@ -1,0 +1,53 @@
+{
+  "blocks": {
+    "Const1": {
+      "type": "const",
+      "x": 50, "y": 50, "width": 50, "height": 50,
+      "parameters": { "value": 1.0 }
+    },
+    "Gain1": {
+      "type": "gain",
+      "x": 150, "y": 50, "width": 50, "height": 50,
+      "parameters": { "gain": 5.0 }
+    },
+    "Log1": {
+      "type": "log",
+      "x": 250, "y": 150, "width": 50, "height": 50,
+      "parameters": {}
+    },
+    "Log2": {
+      "type": "log",
+      "x": 250, "y": 50, "width": 50, "height": 50,
+      "parameters": {}
+    },
+    "Integral1": {
+      "type": "integral",
+      "x": 50, "y": 250, "width": 50, "height": 50,
+      "parameters": { "inital_value": 1.0 }
+    },
+    "Integral2": {
+      "type": "integral",
+      "x": 150, "y": 250, "width": 50, "height": 50,
+      "parameters": { "inital_value": 0.0 }
+    },
+    "Gain2": {
+      "type": "gain",
+      "x": 150, "y": 350, "width": 50, "height": 50,
+      "parameters": { "gain": -1.0 }
+    },
+    "Log3": {
+      "type": "log",
+      "x": 250, "y": 250, "width": 50, "height": 50,
+      "parameters": {}
+    }
+  },
+  "signals": [
+    [ "Const1"   , 0, "Log1"      , 0, {} ],
+    [ "Const1"   , 0, "Gain1"     , 0, {} ],
+    [ "Gain1"    , 0, "Log2"      , 0, {} ],
+    [ "Integral1", 0, "Integral2" , 0, {} ],
+    [ "Integral2", 0, "Gain2"     , 0, {} ],
+    [ "Gain2"    , 0, "Integral1" , 0, {} ],
+    [ "Integral2", 0, "Log3"      , 0, {} ]
+  ]
+}
