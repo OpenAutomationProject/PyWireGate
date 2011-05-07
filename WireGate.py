@@ -229,8 +229,12 @@ class WireGate(daemon.Daemon):
         
     ## TODO: Check COnfig for seperate Logfiles and min level for logging
     def createLog(self,instance):
-        loglevel = self.config[instance].get('loglevel',False)
-        filename = self.config[instance].get('logfile',False)
+        if instance in self.config:
+            loglevel = self.config[instance].get('loglevel',False)
+            filename = self.config[instance].get('logfile',False)
+        else:
+            loglevel = self.config['WireGate'].get('loglevel',False)
+            filename = self.config['WireGate'].get('logfile',False)
 
         return self.__createLog(instance,filename=filename,maxlevel=loglevel)
 
