@@ -43,34 +43,34 @@ def get( file, printCode = False, displayGraph = False ):
     # only afterwards
     if block.hasState():
       G.add_node( name + '.state' )
-      for p in block.outPorts():
-        if block.outPortNameHasState( p[0] ):
-          stateupdate += "    self.%s_%s = %s_%s_next\n" % ( name, p[0], name, p[0] )
+      for p in range(len(block.outPorts())):
+        if block.outPortNumberHasState( p ):
+          stateupdate += "    self.%s_%s = %s_%s_next\n" % ( name, p, name, p )
 
   for signal in loaddict['signals']:
     b = loaddict['blocks']
-    if lib[ loaddict['blocks'][ signal[0] ]['type'] ].outPortNameHasState( signal[1] ):
+    if lib[ loaddict['blocks'][ signal[0] ]['type'] ].outPortNumberHasState( signal[1] ):
       G.add_edge( signal[0] + '.state', signal[2], { 'ports': ( signal[1], signal[3] ), 'start': signal[0] } )
     else:
       G.add_edge( signal[0], signal[2], { 'ports': ( signal[1], signal[3] ), 'start': signal[0] } )
-
+      
   intructionOrder = nx.topological_sort(G)
-
+  
   for instruction in intructionOrder:
     if not instruction in loaddict['blocks']:
       continue # ignore the virtual state nodes
     libBlock = lib[ loaddict['blocks'][ instruction ]['type'] ]
     ins = []
-    for i in libBlock.inPorts():
+    for i in range(len(libBlock.inPorts())):
       for e in G.in_edges_iter( instruction, True ):
         if e[2]['ports'][1] == i:
-          if lib[ loaddict['blocks'][ e[2]['start'] ]['type'] ].outPortNameHasState( e[2]['ports'][0] ):
+          if lib[ loaddict['blocks'][ e[2]['start'] ]['type'] ].outPortNumberHasState( e[2]['ports'][0] ):
             ins.append( "self.%s_%s" % ( e[2]['start'], e[2]['ports'][0] ) )
           else:
             ins.append( "%s_%s" % ( e[2]['start'], e[2]['ports'][0] ) )
     outs = []
-    for o in libBlock.outPorts():
-      outs.append( "%s_%s" % (instruction, o[0]) )
+    for o in range(len(libBlock.outPorts())):
+      outs.append( "%s_%s" % (instruction, o) )
     params = []
     for p in G.node[instruction]['parameters']:
       paramName = "%s_%s" % (instruction, p)
@@ -90,10 +90,12 @@ class LogikClass( CodeClass.CodeClass ):
 %s
 %s
   def run( self, globalVariables ):
+    inspector = {}
     __dt = globalVariables['__dt']
     __time = globalVariables['__elapsedTime']
 %s
 %s
+    return inspector
 """ % ( parameter, init, program, stateupdate )
 
   if printCode:

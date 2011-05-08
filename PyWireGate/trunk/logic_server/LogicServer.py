@@ -66,17 +66,20 @@ class logic_server(Connector):
 
     def run(self):
         # Load logik.json
-        exec LogicImportJSON.get( self._parent.scriptpath + '/logik.json' )
+        exec LogicImportJSON.get( self._parent.scriptpath + '/logik.json', True )
         self.Logik1 = LogikClass
         
         # Load logik2.json - and show code and diagram
-        exec LogicImportJSON.get( self._parent.scriptpath + '/logik2.json' )
+        exec LogicImportJSON.get( self._parent.scriptpath + '/logik2.json', True )
         self.Logik2 = LogikClass
 
-        cnt = 0
-        while self.isrunning:
-            if cnt == 60 and self.isrunning:
-                self.statistics()
-            if self.isrunning:
-                cnt +=1
-                self.idle(5)
+        t = TaskManager.TaskManager(self)
+        t.addInterval( 'Interval 1 - 75 ms Task', 0.075 )
+        t.addInterval( 'Interval 2 - 10 ms Task', 0.010  )
+        t.addTask( 'Interval 1 - 75 ms Task', 'Logik1', self.Logik1 )
+        t.addTask( 'Interval 2 - 10 ms Task', 'Logik2', self.Logik2 )
+        t.start()
+        while True:
+          for m in iter( t.getMessage, None ):
+            print m
+          time.sleep( 0.1 )
