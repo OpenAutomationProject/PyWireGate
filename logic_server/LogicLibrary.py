@@ -32,7 +32,8 @@ class LogBlock( LogicModule.LogicModule ):
   _outPorts            = []
   _parameters          = []
   _drawingInstructions = ""
-  _codingInstructions  = lambda s, n, i, o, p: ( None, "print __time,',','\"%%s\"' %% globalVariables['__name'],',','%s',',',%s" % ( n, i[0]) )
+  #_codingInstructions  = lambda s, n, i, o, p: ( None, "print __time,',','\"%%s\"' %% globalVariables['__name'],',','%s',',',%s" % ( n, i[0]) )
+  _codingInstructions  = lambda s, n, i, o, p: ( None, "inspector['%s'] = %s" % ( n, i[0]) )
 
 class GainBlock( LogicModule.LogicModule ):
   _name                = "gain"
