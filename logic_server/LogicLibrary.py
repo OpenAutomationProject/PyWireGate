@@ -27,7 +27,7 @@ class ConstBlock( LogicModule.LogicModule ):
   _codingInstructions  = lambda s, n, i, o, p: ( "%s = %s" % ( o[0], p[0] ), "%s_next = %s" % ( o[0], p[0] ) )
 
 class LogBlock( LogicModule.LogicModule ):
-  _name                = "log"
+  _name                = "display"
   _inPorts             = [ 'in' ]
   _outPorts            = []
   _parameters          = []

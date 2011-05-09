@@ -15,9 +15,9 @@
       "x": 150, "y": 200, "width": 50, "height": 50,
       "parameters": {}
     },
-    "Log22": {
-      "type": "log",
-      "x": 350, "y": 300, "width": 50, "height": 50,
+    "Display22": {
+      "type": "display",
+      "x": 350, "y": 300, "width": 150, "height": 50,
       "parameters": {}
     },
     "Integral2": {
@@ -38,6 +38,6 @@
     [ "Memory1"  , 0, "Sum1"      , 1, {} ],
     [ "Integral2", 0, "Gain2"     , 0, {} ],
     [ "Gain2"    , 0, "Gain1"     , 0, {} ],
-    [ "Integral2", 0, "Log22"     , 0, {} ]
+    [ "Integral2", 0, "Display22" , 0, {} ]
   ]
 }
