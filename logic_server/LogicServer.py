@@ -19,7 +19,7 @@
 from connector import Connector
 import LogicImportJSON
 import TaskManager
-
+import Queue
 import time
 
 ## Load logik.json
@@ -46,6 +46,7 @@ class logic_server(Connector):
     CONNECTOR_NAME = 'Logic Server'
     CONNECTOR_VERSION = 0.1
     CONNECTOR_LOGNAME = 'logic_server'
+    queues = []
     def __init__(self,parent, instanceName):
         self._parent = parent
         self.WG = parent.WG
@@ -81,5 +82,14 @@ class logic_server(Connector):
         t.start()
         while True:
           for m in iter( t.getMessage, None ):
-            print m
+            for q in self.queues:
+              if (q[0] == None or q[0] == m[0]) and (q[1] == None or q[1] == m[1]):
+                for b in m[2]:
+                  if q[2] == None or q[2] == b:
+                    q[3].put( (m[0], m[1], b, m[2][b]) )
           time.sleep( 0.1 )
+     
+    def createQueue(self, taskFilter, logicFilter, blockFilter):
+      q = Queue.Queue()
+      self.queues.append( (taskFilter, logicFilter, blockFilter, q) )
+      return q

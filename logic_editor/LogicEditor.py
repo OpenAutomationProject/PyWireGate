@@ -33,6 +33,7 @@ from logic_server import LogicLibrary
 import time
 
 thisPath = '/'
+LOGIC = None
 
 class logic_editor(ConnectorServer):
     CONNECTOR_NAME = 'Logic Editor'
@@ -42,6 +43,8 @@ class logic_editor(ConnectorServer):
         self._parent = parent
         if parent:
             self.WG = parent.WG
+            global LOGIC
+            LOGIC = self._parent.connectors['LogicServer']
             global thisPath
             thisPath = parent.scriptpath + '/logic_editor'
         else:
@@ -121,10 +124,16 @@ class LERequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         self.send_header("Content-type", 'text/plain')
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
+        # FIXME: BIG, Big, big memory and CPU leak! A created Queue must be
+        # removed later, or the LogicServer will continue to fill it, even if
+        # no page will be listening anymore!
+        l = LOGIC.createQueue( None, None, None ) # get everything!
         while True:
-          self.wfile.write( "new line\n" )
+          #self.wfile.write( "new line\n" )
+          m = l.get()
+          self.wfile.write( "|%s|%s|%s|%s|\n" % m )
           self.wfile.flush()
-          time.sleep( 1.0 )
+          #time.sleep( 1.0 )
       else:
         self.path = "%s%s" % ( thisPath, self.path )
         return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
