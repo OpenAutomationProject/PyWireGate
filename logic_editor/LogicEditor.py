@@ -25,6 +25,7 @@ import SimpleHTTPServer
 import SocketServer
 import threading
 
+import Queue
 import re
 
 from logic_server import LogicLibrary
@@ -119,21 +120,40 @@ class LERequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         contentType="text/plain"
         self.path = self.path.replace('/logicCode', thisPath + '/..')
         return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
-      elif self.path.startswith('/live'):
-        self.send_response(200)
-        self.send_header("Content-type", 'text/plain')
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
+        
+        
+      # Create the CometVisu interface for the internal variables
+      elif self.path.startswith('/live/l'):
         # FIXME: BIG, Big, big memory and CPU leak! A created Queue must be
         # removed later, or the LogicServer will continue to fill it, even if
         # no page will be listening anymore!
         l = LOGIC.createQueue( None, None, None ) # get everything!
+        contentType="text/plain"
+        f.write('{"v":"0.0.1","s":"live%s"}' % l)
+      elif self.path.startswith('/live/r'):
+        try:
+          l = int( re.findall('s=live(\d*)', self.path )[0] )
+        except IndexError:
+          return # FIXME - return sensible error message
+        self.send_response(200)
+        #self.send_header("Content-type", 'text/plain')
+        self.send_header("Content-type", 'application/json')
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write( '{"d":[' )
+        sep = ''
+        getWait = True # wait for the first result, but not any longer
         while True:
           #self.wfile.write( "new line\n" )
-          m = l.get()
-          self.wfile.write( "|%s|%s|%s|%s|\n" % m )
-          self.wfile.flush()
-          #time.sleep( 1.0 )
+          try:
+            m = LOGIC.queues[l][3].get( getWait )
+            getWait = False
+            self.wfile.write( sep )
+            self.wfile.write( '{"task":"%s","module":"%s","block":"%s","value":%s}' % m )
+            sep = ','
+          except Queue.Empty:
+            self.wfile.write( '],"i":0}')
+            return # Queue is empty, end connection
       else:
         self.path = "%s%s" % ( thisPath, self.path )
         return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
