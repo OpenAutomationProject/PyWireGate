@@ -18,6 +18,10 @@
 
 class LogicModule:
   """The base class for a generic logic module"""
+  
+  # default values
+  _flip = False
+  
   def name( self ):
     return self._name
   
@@ -29,6 +33,9 @@ class LogicModule:
   
   def parameters( self ):
     return self._parameters
+  
+  def flip( self ):
+    return self._flip
   
   def drawingIntructions( self ):
     return self._drawingInstructions
