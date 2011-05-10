@@ -1,32 +1,32 @@
 {
   "blocks": {
     "Memory1": {
-      "type": "memory",
+      "type": "MainLib/memory",
       "x": 150, "y": 300, "width": 50, "height": 50,
       "parameters": { "initial_value": 1.0 }
     },
     "Gain1": {
-      "type": "gain",
+      "type": "MainLib/gain",
       "x": 50, "y": 150, "width": 50, "height": 50,
       "parameters": { "gain": "__dt" }
     },
     "Sum1": {
-      "type": "sum",
+      "type": "MainLib/sum",
       "x": 150, "y": 200, "width": 50, "height": 50,
       "parameters": {}
     },
     "Display22": {
-      "type": "display",
+      "type": "MainLib/display",
       "x": 350, "y": 300, "width": 150, "height": 50,
       "parameters": {}
     },
     "Integral2": {
-      "type": "integral",
+      "type": "MainLib/integral",
       "x": 250, "y": 300, "width": 50, "height": 50,
       "parameters": { "inital_value": 0.0 }
     },
     "Gain2": {
-      "type": "gain",
+      "type": "MainLib/gain",
       "x": 150, "y": 50, "width": 50, "height": 50,
       "parameters": { "gain": -1.0 }
     }

@@ -33,6 +33,9 @@ class LogicModule:
   def drawingIntructions( self ):
     return self._drawingInstructions
   
+  def maskOptions( self ):
+    return self._maskOptions
+  
   def codingIntructions( self, name, ins, outs, params ):
     return self._codingInstructions( name, ins, outs, params )
 

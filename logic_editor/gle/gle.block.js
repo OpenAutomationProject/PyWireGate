@@ -21,11 +21,11 @@
 
 /**
  * The block constructor.
- * type: the block (proto)type in JSON notation
+ * prototype: the block (proto)type in JSON notation
  * svg: the link to the SVG canvas
  * interactive: event handlers will be added, set to false to create picture only
  */
-function Block( type, svg, interactive )
+function Block( prototype, svg, interactive )
 {
   // setup the private "constants"
   var that = this;
@@ -33,21 +33,22 @@ function Block( type, svg, interactive )
   var outset = 3; // how far should the handle stick out
   
   // setup the private variables
-  var name        = type.name        || 'UNKNOWN';
-  var x           = type.x           || 0;
-  var y           = type.y           || 0;
-  var width       = type.width       || 100;
-  var height      = type.height      || 100;
-  var rotation    = type.rotation    || 0;
-  var flip        = type.flip        || false;
-  var mask        = type.mask        || undefined;
-  var maskOptions = type.maskOptions || { showLabel: true };
-  var color       = type.color       || [0.0, 0.0, 0.0];
-  var background  = type.background  || [1.0, 1.0, 1.0];
-  var inPorts     = type.inPorts     || [];
-  var outPorts    = type.outPorts    || [];
-  var parameters  = type.parameters  || {};
-  var parameter   = type.parameter   || createParameter( type.parameters );
+  var type        = prototype.type        || 'UNKNOWN';
+  var name        = prototype.name        || 'UNKNOWN';
+  var x           = prototype.x           || 0;
+  var y           = prototype.y           || 0;
+  var width       = prototype.width       || 100;
+  var height      = prototype.height      || 100;
+  var rotation    = prototype.rotation    || 0;
+  var flip        = prototype.flip        || false;
+  var mask        = prototype.mask        || undefined;
+  var maskOptions = prototype.maskOptions || { showLabel: true };
+  var color       = prototype.color       || [0.0, 0.0, 0.0];
+  var background  = prototype.background  || [1.0, 1.0, 1.0];
+  var inPorts     = prototype.inPorts     || [];
+  var outPorts    = prototype.outPorts    || [];
+  var parameters  = prototype.parameters  || {};
+  var parameter   = prototype.parameter   || createParameter( prototype.parameters );
   var postParameterUpdateFn = maskOptions.postParameterUpdate;
   
   var canvas   = svg         || $('#editor').svg('get');
@@ -221,6 +222,18 @@ function Block( type, svg, interactive )
     
   }
   
+  // private function for live updating of param = {'text-anchor':'start'}a display
+  this._updateValue = function( value )
+  {
+    if( g )
+    {
+      //console.log( '_updateValue', value.toString(), g, 10, height/2 );
+      $( g ).find( '.valueString').remove();
+      param = {'text-anchor':'start','class':'valueString'};
+      canvas.text( g, 10, height/2, value.toString(), param );
+    }
+  }
+  
   function createParameter( structure )
   {
     var retVal = {};
@@ -339,6 +352,8 @@ function Block( type, svg, interactive )
   }
   
   // the public (privileged) methods:
+  this.getType   = function()          { return type  ;            }
+  this.getName   = function()          { return name  ;            }
   this.getWidth  = function()          { return width ;            }
   this.setWidth  = function( _width  ) { width = _width  ; draw(); }
   this.getHeight = function()          { return height;            }

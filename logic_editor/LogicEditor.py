@@ -81,11 +81,12 @@ class LERequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         f.write('{ \x22v\x22:\x220.0.1\x22, \x22s\x22:\x22SESSION\x22 }\n\n')
       elif self.path.startswith("/logicLib"):
         lib = LogicLibrary.LogicLibrary().getLibrary()
-        f.write( '{"MainLib":{' )
+        thisLib = 'MainLib' # FIXME iterate over it...
+        f.write( '{"%s":{' % thisLib )
         blockPrefix = ''
-        for blockName in lib:
+        for blockName in lib[ thisLib ]:
           f.write( '%s"%s":{"name":"%s",' % (blockPrefix, blockName, blockName) )
-          block = lib[ blockName ]
+          block = lib[ thisLib ][ blockName ]
           
           f.write( '"inPorts":[' )
           prefix = ''
@@ -110,6 +111,21 @@ class LERequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             f.write( '%s{"name":"%s","type":"float","default":0.0}' % (prefix, parameter) )
             prefix = ','
           f.write( '],' )
+          
+          f.write( '"maskOptions":{' )
+          prefix = ''
+          maskOptions = block.maskOptions()
+          for maskOption in maskOptions:
+            option = maskOptions[maskOption]
+            if type(option) in (int, float):
+              f.write( '%s"%s":%s' % (prefix, maskOption, option) )
+            elif type(option) == bool:
+              option = 'true' if option else 'false'
+              f.write( '%s"%s":%s' % (prefix, maskOption, option) )
+            else:
+              f.write( '%s"%s":"%s"' % (prefix, maskOption, option) )
+            prefix = ','
+          f.write( '},' )
           
           f.write( '"width":100,"height":50,"rotation":0,"flip":false,"color":[0.0,0.0,0.0],"background":[1.0, 1.0, 1.0]' )
           
