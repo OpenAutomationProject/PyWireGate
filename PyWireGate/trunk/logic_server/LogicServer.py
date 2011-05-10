@@ -21,6 +21,7 @@ import LogicImportJSON
 import TaskManager
 import Queue
 import time
+import threading
 
 ## Load logik.json
 #exec LogicImportJSON.get( 'logik.json' )
@@ -46,7 +47,10 @@ class logic_server(Connector):
     CONNECTOR_NAME = 'Logic Server'
     CONNECTOR_VERSION = 0.1
     CONNECTOR_LOGNAME = 'logic_server'
-    queues = []
+    queues = {}
+    lastQueueId = -1
+    write_mutex = threading.RLock()
+    
     def __init__(self,parent, instanceName):
         self._parent = parent
         self.WG = parent.WG
@@ -75,14 +79,15 @@ class logic_server(Connector):
         self.Logik2 = LogikClass
 
         t = TaskManager.TaskManager(self)
-        t.addInterval( 'Interval 1 - 75 ms Task', 0.075 )
-        t.addInterval( 'Interval 2 - 10 ms Task', 0.010  )
+        t.addInterval( 'Interval 1 - 75 ms Task', 0.75 )
+        t.addInterval( 'Interval 2 - 10 ms Task', 0.910  )
         t.addTask( 'Interval 1 - 75 ms Task', 'Logik1', self.Logik1 )
         t.addTask( 'Interval 2 - 10 ms Task', 'Logik2', self.Logik2 )
         t.start()
         while True:
           for m in iter( t.getMessage, None ):
             for q in self.queues:
+              q = self.queues[q]
               if (q[0] == None or q[0] == m[0]) and (q[1] == None or q[1] == m[1]):
                 for b in m[2]:
                   if q[2] == None or q[2] == b:
@@ -90,6 +95,11 @@ class logic_server(Connector):
           time.sleep( 0.1 )
      
     def createQueue(self, taskFilter, logicFilter, blockFilter):
-      q = Queue.Queue()
-      self.queues.append( (taskFilter, logicFilter, blockFilter, q) )
-      return q
+      try:
+        self.write_mutex.acquire()
+        self.lastQueueId += 1
+        thisQueueId = self.lastQueueId # extra variable to be save when the lock is released
+        self.queues[ thisQueueId ] = (taskFilter, logicFilter, blockFilter, Queue.Queue())
+      finally:
+        self.write_mutex.release()
+        return thisQueueId

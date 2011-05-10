@@ -163,16 +163,19 @@ function updateKnownLogics( newLogicName )
 
 function displayLogic( logicName )
 {
-  console.log( '"'+logicName+'"' );
   logic = logics[ logicName ];
+  
+  // clean canvas first
+  $('#editor g').remove();
+  
+  // draw all the blocks
   $.each( logic.blocks, function( name, def ){
     var newBlock = $.extend( true, {}, libJSON['MainLib'][ def.type ], def, {'name':name} );
     drawElement( undefined, newBlock, true );
   });
-  console.log( blockRegistry );
+  
+  // and connect them
   $.each( logic.signals, function( name, def ){
-    console.log( name, def, blockRegistry[ def[0] ] );
-    
     var startBlock = blockRegistry[ def[0] ];
     var endBlock = blockRegistry[ def[2] ];
     var pn = def[1];
