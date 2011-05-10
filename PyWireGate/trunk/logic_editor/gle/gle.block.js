@@ -176,7 +176,7 @@ function Block( prototype, svg, interactive )
       }
       if( maskOptions.showLabel )
         canvas.text( g, 1.2*p[0].x-0.2*p[1].x, 1.2*p[0].y-0.2*p[1].y, this.name, 
-                     {'dominant-baseline':'middle','text-anchor':'start'} );
+                     {'dominant-baseline':'middle','text-anchor': flip?'end':'start'} );
     });
     
     // Draw the outports
@@ -198,7 +198,7 @@ function Block( prototype, svg, interactive )
       }
       if( maskOptions.showLabel )
         canvas.text( g, 1.2*p[0].x-0.2*p[1].x, 1.2*p[0].y-0.2*p[1].y, this.name, 
-                    {'dominant-baseline':'middle','text-anchor':'end'} );
+                    {'dominant-baseline':'middle','text-anchor': flip?'start':'end'} );
     });
     
     // Draw the label
@@ -379,15 +379,15 @@ function Block( prototype, svg, interactive )
       return maskOptions.inPortPos( number, that, maskOptions, parameter );
     } else
       return [ 
-        { x: x     , y: y + height * (0.5 + number) / inPorts.length },
-        { x: x - 20, y: y + height * (0.5 + number) / inPorts.length }
+        { x: flip ? x + width      : x     , y: y + height * (0.5 + number) / inPorts.length },
+        { x: flip ? x + width + 20 : x - 20, y: y + height * (0.5 + number) / inPorts.length }
       ];
   }
   this.outPortPos = function( number )
   {
     return [ 
-      { x: x + width     , y: y + height * (0.5 + number) / outPorts.length },
-      { x: x + width + 20, y: y + height * (0.5 + number) / outPorts.length }
+      { x: flip ? x      : x + width     , y: y + height * (0.5 + number) / outPorts.length },
+      { x: flip ? x - 20 : x + width + 20, y: y + height * (0.5 + number) / outPorts.length }
     ];
   }
   

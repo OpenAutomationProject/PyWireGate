@@ -2,8 +2,9 @@
   "blocks": {
     "Memory1": {
       "type": "MainLib/memory",
-      "x": 150, "y": 300, "width": 50, "height": 50,
-      "parameters": { "initial_value": 1.0 }
+      "x": 150, "y": 250, "width": 50, "height": 50,
+      "parameters": { "initial_value": 1.0 },
+      "flip" : true
     },
     "Gain1": {
       "type": "MainLib/gain",
@@ -12,27 +13,28 @@
     },
     "Sum1": {
       "type": "MainLib/sum",
-      "x": 150, "y": 200, "width": 50, "height": 50,
+      "x": 150, "y": 150, "width": 50, "height": 50,
       "parameters": {}
     },
     "Display22": {
       "type": "MainLib/display",
-      "x": 350, "y": 300, "width": 150, "height": 50,
+      "x": 350, "y": 150, "width": 150, "height": 50,
       "parameters": {}
     },
     "Integral2": {
       "type": "MainLib/integral",
-      "x": 250, "y": 300, "width": 50, "height": 50,
+      "x": 250, "y": 150, "width": 50, "height": 50,
       "parameters": { "inital_value": 0.0 }
     },
     "Gain2": {
       "type": "MainLib/gain",
       "x": 150, "y": 50, "width": 50, "height": 50,
-      "parameters": { "gain": -1.0 }
+      "parameters": { "gain": -1.0 },
+      "flip" : true
     }
   },
   "signals": [
-    [ "Memory1"  , 0, "Integral2" , 0, {} ],
+    [ "Sum1"     , 0, "Integral2" , 0, {} ],
     [ "Gain1"    , 0, "Sum1"      , 0, {} ],
     [ "Sum1"     , 0, "Memory1"   , 0, {} ],
     [ "Memory1"  , 0, "Sum1"      , 1, {} ],

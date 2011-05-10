@@ -112,18 +112,14 @@ class LERequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             prefix = ','
           f.write( '],' )
           
+          f.write( '"flip":%s,' % self._convert2JSON( block.flip() ) )
+          
           f.write( '"maskOptions":{' )
           prefix = ''
           maskOptions = block.maskOptions()
           for maskOption in maskOptions:
             option = maskOptions[maskOption]
-            if type(option) in (int, float):
-              f.write( '%s"%s":%s' % (prefix, maskOption, option) )
-            elif type(option) == bool:
-              option = 'true' if option else 'false'
-              f.write( '%s"%s":%s' % (prefix, maskOption, option) )
-            else:
-              f.write( '%s"%s":"%s"' % (prefix, maskOption, option) )
+            f.write( '%s"%s":%s' % (prefix, maskOption, self._convert2JSON( option ) ) )
             prefix = ','
           f.write( '},' )
           
@@ -189,4 +185,15 @@ class LERequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
   
     def copyfile(self, source, outputfile):
         shutil.copyfileobj(source, outputfile)
-  
+        
+    # create a JSON representation out of the Python value   
+    def _convert2JSON( self, value ):
+      if type( value ) in ( int, float ):
+        return str( value )
+      elif type( value ) == bool:
+        if value:
+          return 'true'
+        else:
+          return 'false'
+      else:
+        return '"%s"' % value
