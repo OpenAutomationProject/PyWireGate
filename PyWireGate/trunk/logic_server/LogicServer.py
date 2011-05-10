@@ -79,8 +79,8 @@ class logic_server(Connector):
         self.Logik2 = LogikClass
 
         t = TaskManager.TaskManager(self)
-        t.addInterval( 'Interval 1 - 75 ms Task', 0.75 )
-        t.addInterval( 'Interval 2 - 10 ms Task', 0.910  )
+        t.addInterval( 'Interval 1 - 75 ms Task', 0.075 )
+        t.addInterval( 'Interval 2 - 10 ms Task', 0.010  )
         t.addTask( 'Interval 1 - 75 ms Task', 'Logik1', self.Logik1 )
         t.addTask( 'Interval 2 - 10 ms Task', 'Logik2', self.Logik2 )
         t.start()

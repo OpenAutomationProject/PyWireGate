@@ -36,7 +36,8 @@ def get( file, printCode = False, displayGraph = False ):
   stateupdate = '' # the string containing the update of the states
 
   for name, attribute in loaddict['blocks'].iteritems():
-    block = lib[ attribute['type'] ]
+    blockType = attribute['type'].split('/')
+    block = lib[ blockType[0] ][ blockType[1] ]
     G.add_node( name, attribute )
     # Add aditional, virtual node "<name>.state" that is treates as an additional
     # input with no dependancy as the state won't change during an update cycle,
@@ -49,7 +50,8 @@ def get( file, printCode = False, displayGraph = False ):
 
   for signal in loaddict['signals']:
     b = loaddict['blocks']
-    if lib[ loaddict['blocks'][ signal[0] ]['type'] ].outPortNumberHasState( signal[1] ):
+    blockType = loaddict['blocks'][ signal[0] ]['type'].split('/')
+    if lib[ blockType[0] ][ blockType[1] ].outPortNumberHasState( signal[1] ):
       G.add_edge( signal[0] + '.state', signal[2], { 'ports': ( signal[1], signal[3] ), 'start': signal[0] } )
     else:
       G.add_edge( signal[0], signal[2], { 'ports': ( signal[1], signal[3] ), 'start': signal[0] } )
@@ -59,12 +61,14 @@ def get( file, printCode = False, displayGraph = False ):
   for instruction in intructionOrder:
     if not instruction in loaddict['blocks']:
       continue # ignore the virtual state nodes
-    libBlock = lib[ loaddict['blocks'][ instruction ]['type'] ]
+    blockType = loaddict['blocks'][ instruction ]['type'].split('/')
+    libBlock = lib[ blockType[0] ][ blockType[1] ]
     ins = []
     for i in range(len(libBlock.inPorts())):
       for e in G.in_edges_iter( instruction, True ):
         if e[2]['ports'][1] == i:
-          if lib[ loaddict['blocks'][ e[2]['start'] ]['type'] ].outPortNumberHasState( e[2]['ports'][0] ):
+          blockType = loaddict['blocks'][ e[2]['start'] ]['type'].split('/')
+          if lib[ blockType[0] ][ blockType[1] ].outPortNumberHasState( e[2]['ports'][0] ):
             ins.append( "self.%s_%s" % ( e[2]['start'], e[2]['ports'][0] ) )
           else:
             ins.append( "%s_%s" % ( e[2]['start'], e[2]['ports'][0] ) )

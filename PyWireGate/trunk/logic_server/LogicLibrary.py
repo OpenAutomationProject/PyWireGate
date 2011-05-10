@@ -24,14 +24,16 @@ class ConstBlock( LogicModule.LogicModule ):
   _outPorts            = [ ( 'out', 'const' ) ]
   _parameters          = [ 'value' ]
   _drawingInstructions = ""
+  _maskOptions         = { 'showLabel': True }
   _codingInstructions  = lambda s, n, i, o, p: ( "%s = %s" % ( o[0], p[0] ), "%s_next = %s" % ( o[0], p[0] ) )
 
-class LogBlock( LogicModule.LogicModule ):
+class DisplayBlock( LogicModule.LogicModule ):
   _name                = "display"
   _inPorts             = [ 'in' ]
   _outPorts            = []
   _parameters          = []
   _drawingInstructions = ""
+  _maskOptions         = { 'showLabel': False }
   #_codingInstructions  = lambda s, n, i, o, p: ( None, "print __time,',','\"%%s\"' %% globalVariables['__name'],',','%s',',',%s" % ( n, i[0]) )
   _codingInstructions  = lambda s, n, i, o, p: ( None, "inspector['%s'] = %s" % ( n, i[0]) )
 
@@ -41,6 +43,7 @@ class GainBlock( LogicModule.LogicModule ):
   _outPorts            = [ ( 'out', 'signal' )  ]
   _parameters          = [ 'gain' ]
   _drawingInstructions = ""
+  _maskOptions         = { 'showLabel': True }
   _codingInstructions  = lambda s, n, i, o, p: ( None, "%s = %s * %s" % ( o[0], p[0], i[0] ) )
 
 class SumBlock( LogicModule.LogicModule ):
@@ -49,6 +52,7 @@ class SumBlock( LogicModule.LogicModule ):
   _outPorts            = [ ( 'out', 'signal' )  ]
   _parameters          = []
   _drawingInstructions = ""
+  _maskOptions         = { 'showLabel': True }
   _codingInstructions  = lambda s, n, i, o, p: ( None, "%s = %s + %s" % ( o[0], i[0], i[1] ) )
 
 class MemoryBlock( LogicModule.LogicModule ):
@@ -57,6 +61,7 @@ class MemoryBlock( LogicModule.LogicModule ):
   _outPorts            = [ ( 'out', 'state' )  ]
   _parameters          = [ 'inital_value' ]
   _drawingInstructions = ""
+  _maskOptions         = { 'showLabel': True }
   _codingInstructions  = lambda s, n, i, o, p: ( "%s = %s" % (o[0], p[0]), "%s_next = %s" % ( o[0], i[0] ) )
 
 class IntegralBlock( LogicModule.LogicModule ):
@@ -65,23 +70,25 @@ class IntegralBlock( LogicModule.LogicModule ):
   _outPorts            = [ ( 'out', 'state' )  ]
   _parameters          = [ 'initial_value' ]
   _drawingInstructions = ""
+  _maskOptions         = { 'showLabel': True }
   _codingInstructions  = lambda s, n, i, o, p: ( "%s = %s" % (o[0], p[0]), "%s_next = %s * %s + self.%s" % ( o[0], "__dt", i[0], o[0] ) )
 
 class LogicLibrary:
   """The container for all known library blocks"""
-  _db = {}
+  _db = {'MainLib':{}}
   
   def __init__( self ):
     self.addBlock( ConstBlock    )
-    self.addBlock( LogBlock      )
+    self.addBlock( DisplayBlock  )
     self.addBlock( GainBlock     )
     self.addBlock( SumBlock      )
     self.addBlock( MemoryBlock   )
     self.addBlock( IntegralBlock )
     
   def addBlock( self, block ):
+    l = 'MainLib'
     b = block()
-    self._db[ b.name() ] = b
+    self._db[ l ][ b.name() ] = b
   
   def getLibrary( self ):
     return self._db

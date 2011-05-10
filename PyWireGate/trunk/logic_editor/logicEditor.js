@@ -137,6 +137,7 @@ function drawLibrary()
     $.each( this, function( element ){
       var entry =  $('<div class="libEntry"></div>');
       var obj = this;
+      obj.type = libName + '/' + element;
       var width = this.width+20;
       var height = this.height+35;
       entry.prepend( 
@@ -165,12 +166,13 @@ function displayLogic( logicName )
 {
   logic = logics[ logicName ];
   
-  // clean canvas first
-  $('#editor g').remove();
+  $('#editor g').remove(); // clean canvas first
+  blockRegistry = {};      // and then the block registry
   
   // draw all the blocks
   $.each( logic.blocks, function( name, def ){
-    var newBlock = $.extend( true, {}, libJSON['MainLib'][ def.type ], def, {'name':name} );
+    var type = def.type.split('/');
+    var newBlock = $.extend( true, {}, libJSON[ type[0] ][ type[1] ], def, {'name':name} );
     drawElement( undefined, newBlock, true );
   });
   
@@ -197,6 +199,14 @@ function drawElement( svg, element, addEvent ){
   if( addEvent === undefined ) addEvent = true;
   var b = new Block( element, svg, addEvent );
   if( addEvent ) blockRegistry[ element.name ] = b;
+  // FIXME this should become more generalized
+  if( 'MainLib/display' == element.type ) // make display interactive
+  {
+    liveUpdateCalls.push( [
+      b.getName(),
+      b._updateValue
+    ] );
+  }
 }
 
 function colorByArray( a )

@@ -280,28 +280,22 @@ $.getJSON('/logicCode/logik2.json', function(data) {
 });
 
 // tweak backend communication, should also be done on demand
-XXX = new CometVisu( '/live/' );
-XXX.update = function( json )
+live = new CometVisu( '/live/' );
+liveUpdateCalls = [];
+live.update = function( json )
 {
-  console.log( json );
+  $.each( liveUpdateCalls, function(){
+    for( var i = json.length-1; i >= 0; i-- )
+    {
+      if( json[i].block == this[0] )
+      {
+        this[1]( json[i].value );
+      }
+    }
+  });
 }
-XXX.subscribe( ['ALL'] );
+live.subscribe( ['ALL'] );
 
 $(window).unload(function() {
-  XXX.stop();
+  live.stop();
 });
-/*XXX=$.ajax({
-  url: '/live',
-  cache: false,
-  success: function(html){
-    console.log('success', html);
-  }
-});*/
-/*
-    var ws = new websocket("/live");  
-    ws.onopen = function() {  
-      ws.send("Hello Mr. Server!");  
-    };  
-    ws.onmessage = function (e) { console.log(e.data); };  
-    ws.onclose = function() { console.log('close'); };  
-    */
