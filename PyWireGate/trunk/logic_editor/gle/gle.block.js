@@ -50,6 +50,8 @@ function Block( prototype, svg, interactive )
   var parameters  = prototype.parameters  || {};
   var parameter   = prototype.parameter   || createParameter( prototype.parameters );
   var postParameterUpdateFn = maskOptions.postParameterUpdate;
+  var cElem       = false; // if that block has a <canvas> it's cached here
+  var cCtx        = false; // as well as it's context
   
   var canvas   = svg         || $('#editor').svg('get');
   var addEvent = interactive !== undefined ? interactive : true;
@@ -85,7 +87,27 @@ function Block( prototype, svg, interactive )
     // Draw the body
     //var body = canvas.group( g, {'transform':'translate(6,1)'} );
     var body = canvas.group( g );
-    if( mask )
+    if( 'MainLib/scope' == type )
+    {
+      gB = body;
+      var xhtmlNS = 'http://www.w3.org/1999/xhtml',
+          svgNS   = 'http://www.w3.org/2000/svg',
+          xlinkNS = 'http://www.w3.org/1999/xlink';
+      var f = document.createElementNS( svgNS, 'foreignObject' );
+      f.x.baseVal.value = 0;
+      f.y.baseVal.value = 0;
+      f.width.baseVal.value = width;
+      f.height.baseVal.value = height;
+      var c = document.createElementNS( xhtmlNS, 'canvas' );
+      c.width = width;
+      c.height = height;
+      var foObj = body.appendChild(f);
+      cElem = foObj.appendChild(c); 
+      cCtx = cElem.getContext( '2d' );
+      cCtx.fillStyle="rgba(0,0,0,255)";
+      cCtx.fillRect(0,0,width,height);
+    }
+    else if( mask )
     {
       var path = canvas.createPath();
       for( var i in mask )
@@ -223,14 +245,30 @@ function Block( prototype, svg, interactive )
   }
   
   // private function for live updating of param = {'text-anchor':'start'}a display
+  var scopeLastX = -1;
   this._updateValue = function( value )
   {
-    if( g )
+    if( 'MainLib/scope' == type )
     {
-      //console.log( '_updateValue', value.toString(), g, 10, height/2 );
-      $( g ).find( '.valueString').remove();
-      param = {'text-anchor':'start','class':'valueString'};
-      canvas.text( g, 10, height/2, value.toString(), param );
+      scopeLastX = ( scopeLastX + 1 ) % width;
+      var thisY = Math.round( (2.0+value)*(height/4.0) );
+      var imgdA = cCtx.getImageData( 0, 0, width-1, height );
+      cCtx.putImageData( imgdA, 1, 0 );
+      var imgdI = cCtx.createImageData( 1, height );
+      var pix = imgdI.data;
+      for( var i = 0; i < height; i++ )
+        pix[ 4 * i + 3 ] = 255; // set alpha
+      pix[ 4 * thisY + 0 ] = 0  ; // red
+      pix[ 4 * thisY + 1 ] = 255; // green
+      pix[ 4 * thisY + 2 ] = 0  ; // blue
+      cCtx.putImageData( imgdI, 0, 0 );
+    } else {
+      if( g )
+      {
+        $( g ).find( '.valueString').remove();
+        param = {'text-anchor':'start','class':'valueString'};
+        canvas.text( g, 10, height/2, value.toString(), param );
+      }
     }
   }
   

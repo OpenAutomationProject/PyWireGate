@@ -37,6 +37,16 @@ class DisplayBlock( LogicModule.LogicModule ):
   #_codingInstructions  = lambda s, n, i, o, p: ( None, "print __time,',','\"%%s\"' %% globalVariables['__name'],',','%s',',',%s" % ( n, i[0]) )
   _codingInstructions  = lambda s, n, i, o, p: ( None, "inspector['%s'] = %s" % ( n, i[0]) )
 
+class ScopeBlock( LogicModule.LogicModule ):
+  _name                = "scope"
+  _inPorts             = [ 'in' ]
+  _outPorts            = []
+  _parameters          = []
+  _drawingInstructions = ""
+  _maskOptions         = { 'showLabel': False }
+  _codingInstructions  = lambda s, n, i, o, p: ( None, "inspector['%s'] = %s" % ( n, i[0]) )
+
+
 class GainBlock( LogicModule.LogicModule ):
   _name                = "gain"
   _inPorts             = [ 'in' ]
@@ -80,6 +90,7 @@ class LogicLibrary:
   def __init__( self ):
     self.addBlock( ConstBlock    )
     self.addBlock( DisplayBlock  )
+    self.addBlock( ScopeBlock    )
     self.addBlock( GainBlock     )
     self.addBlock( SumBlock      )
     self.addBlock( MemoryBlock   )

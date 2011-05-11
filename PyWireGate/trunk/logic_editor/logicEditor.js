@@ -200,10 +200,11 @@ function drawElement( svg, element, addEvent ){
   var b = new Block( element, svg, addEvent );
   if( addEvent ) blockRegistry[ element.name ] = b;
   // FIXME this should become more generalized
-  if( 'MainLib/display' == element.type ) // make display interactive
+  if( 'MainLib/display' == element.type || 'MainLib/scope' == element.type ) // make display and scope interactive
   {
     liveUpdateCalls.push( [
       b.getName(),
+      'MainLib/display' == element.type,
       b._updateValue
     ] );
   }
