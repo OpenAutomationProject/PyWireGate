@@ -282,14 +282,16 @@ $.getJSON('/logicCode/logik2.json', function(data) {
 // tweak backend communication, should also be done on demand
 live = new CometVisu( '/live/' );
 liveUpdateCalls = [];
+count = 10;
 live.update = function( json )
 {
   $.each( liveUpdateCalls, function(){
-    for( var i = json.length-1; i >= 0; i-- )
+    for( var i = 0; i < json.length; i++ )
     {
-      if( json[i].block == this[0] )
+      var last = i == json.length-1;
+      if( json[i].block == this[0] && ( last || !this[1] ) )
       {
-        this[1]( json[i].value );
+        this[2]( json[i].value );
       }
     }
   });

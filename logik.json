@@ -38,7 +38,12 @@
     },
     "Display3": {
       "type": "MainLib/display",
-      "x": 250, "y": 250, "width": 150, "height": 50,
+      "x": 250, "y": 350, "width": 150, "height": 50,
+      "parameters": {}
+    },
+    "Scope_1": {
+      "type": "MainLib/scope",
+      "x": 500, "y": 125, "width": 600, "height": 300,
       "parameters": {}
     }
   },
@@ -49,6 +54,7 @@
     [ "Integral1", 0, "Integral2" , 0, {} ],
     [ "Integral2", 0, "Gain2"     , 0, {} ],
     [ "Gain2"    , 0, "Integral1" , 0, {} ],
-    [ "Integral2", 0, "Display3"  , 0, {} ]
+    [ "Integral2", 0, "Display3"  , 0, {} ],
+    [ "Integral2", 0, "Scope_1"   , 0, {} ]
   ]
 }
